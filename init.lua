@@ -8,6 +8,8 @@ local lspcfg = require('lspconfig')
 local cmp_action = require('lsp-zero').cmp_action()
 local cmp_select = {behavior = cmp.SelectBehavior.Select}
 
+require('hardtime').setup()
+
 -- status line
 require('lualine').setup{ options = { theme = 'onedark' } }
 
@@ -201,6 +203,14 @@ return require('packer').startup(function(use)
       component_separators = '|',
       section_separators = '',
       }
+  }
+
+  use {
+    'm4xshen/hardtime.nvim',
+    requires = {
+      {'MunifTanjim/nui.nvim'},
+      {'nvim-lua/plenary.nvim'},
+    }
   }
 
 
