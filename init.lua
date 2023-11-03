@@ -16,6 +16,8 @@ require('lualine').setup{ options = { theme = 'onedark' } }
 -- mason language server manager
 require("mason").setup({ PATH = "prepend" })
 
+require("hardtime").setup()
+
 lsp_zero.on_attach(function(_, bufnr)
   lsp_zero.default_keymaps({buffer = bufnr})
 end)
@@ -208,11 +210,19 @@ return require('packer').startup(function(use)
   use {
     'm4xshen/hardtime.nvim',
     requires = {
+<<<<<<< HEAD
       {'MunifTanjim/nui.nvim'},
       {'nvim-lua/plenary.nvim'},
     }
   }
 
+=======
+      { 'MunifTanjim/nui.nvim' },
+      { 'nvim-lua/plenary.nvim' }
+    },
+    opts = {}
+  }
+>>>>>>> 116ef70 (desktop did something)
 
   use {
     'VonHeikemen/lsp-zero.nvim',

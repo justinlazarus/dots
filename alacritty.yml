@@ -23,7 +23,7 @@ font:
   bold_italic:
     family: Iosevka Nerd Font
     style: Bold Italic
-  size: 14.0
+  size: 12.0
   AppleFontSmoothing : true
 
 # If `true`, bold text is drawn using the bright color variants.
