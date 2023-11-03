@@ -210,19 +210,11 @@ return require('packer').startup(function(use)
   use {
     'm4xshen/hardtime.nvim',
     requires = {
-<<<<<<< HEAD
       {'MunifTanjim/nui.nvim'},
       {'nvim-lua/plenary.nvim'},
-    }
-  }
-
-=======
-      { 'MunifTanjim/nui.nvim' },
-      { 'nvim-lua/plenary.nvim' }
     },
     opts = {}
   }
->>>>>>> 116ef70 (desktop did something)
 
   use {
     'VonHeikemen/lsp-zero.nvim',
