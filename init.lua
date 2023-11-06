@@ -1,5 +1,60 @@
 
 ---------------------------------------------------------------------------------------------------
+-- plugin management ------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+vim.cmd [[packadd packer.nvim]]
+
+require('packer').startup(function(use)
+  use 'wbthomason/packer.nvim'
+  use('nvim-treesitter/nvim-treesitter', { run = ':TSUpdate' })
+  use('tpope/vim-fugitive')
+
+  use {
+    'navarasu/onedark.nvim',
+    priority = 1000,
+    config = function() vim.cmd.colorscheme 'onedark' end,
+  }
+
+  use {
+    'nvim-telescope/telescope.nvim',
+    tag = '0.1.4',
+    requires = { {'nvim-lua/plenary.nvim'} }
+  }
+
+  use {
+    'nvim-lualine/lualine.nvim',
+    opts = {
+      icons_enabled = false,
+      theme = 'onedark',
+      component_separators = '|',
+      section_separators = '',
+      }
+  }
+
+  use {
+    'm4xshen/hardtime.nvim',
+    requires = {
+      {'MunifTanjim/nui.nvim'},
+      {'nvim-lua/plenary.nvim'},
+    },
+    opts = {}
+  }
+
+  use {
+    'VonHeikemen/lsp-zero.nvim',
+    branch = 'v3.x',
+    requires = {
+      {'williamboman/mason.nvim'},
+      {'williamboman/mason-lspconfig.nvim'},
+      {'neovim/nvim-lspconfig'},
+      {'hrsh7th/nvim-cmp'},
+      {'hrsh7th/cmp-nvim-lsp'},
+      {'L3MON4D3/LuaSnip'},
+      }
+  }
+end)
+
+---------------------------------------------------------------------------------------------------
 -- plugin configuration ---------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------
 local lsp_zero = require('lsp-zero')
@@ -175,57 +230,3 @@ require'nvim-treesitter.configs'.setup {
   },
 }
 
----------------------------------------------------------------------------------------------------
--- plugin management ------------------------------------------------------------------------------
----------------------------------------------------------------------------------------------------
-vim.cmd [[packadd packer.nvim]]
-
-return require('packer').startup(function(use)
-  use 'wbthomason/packer.nvim'
-  use('nvim-treesitter/nvim-treesitter', { run = ':TSUpdate' })
-  use('tpope/vim-fugitive')
-
-  use {
-    'navarasu/onedark.nvim',
-    priority = 1000,
-    config = function() vim.cmd.colorscheme 'onedark' end,
-  }
-
-  use {
-    'nvim-telescope/telescope.nvim',
-    tag = '0.1.4',
-    requires = { {'nvim-lua/plenary.nvim'} }
-  }
-
-  use {
-    'nvim-lualine/lualine.nvim',
-    opts = {
-      icons_enabled = false,
-      theme = 'onedark',
-      component_separators = '|',
-      section_separators = '',
-      }
-  }
-
-  use {
-    'm4xshen/hardtime.nvim',
-    requires = {
-      {'MunifTanjim/nui.nvim'},
-      {'nvim-lua/plenary.nvim'},
-    },
-    opts = {}
-  }
-
-  use {
-    'VonHeikemen/lsp-zero.nvim',
-    branch = 'v3.x',
-    requires = {
-      {'williamboman/mason.nvim'},
-      {'williamboman/mason-lspconfig.nvim'},
-      {'neovim/nvim-lspconfig'},
-      {'hrsh7th/nvim-cmp'},
-      {'hrsh7th/cmp-nvim-lsp'},
-      {'L3MON4D3/LuaSnip'},
-      }
-  }
-end)
