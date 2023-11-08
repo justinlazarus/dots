@@ -1,4 +1,3 @@
-
 ---------------------------------------------------------------------------------------------------
 -- plugin management ------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------
@@ -143,6 +142,7 @@ vim.softtabstop = 4
 vim.shiftwidth = 4
 vim.expandtab = true
 vim.textwidth = 80
+vim.autoindent = true
 
 vim.opt.wrap = false
 
@@ -197,6 +197,12 @@ vim.keymap.set('n', '<leader>/', function()
   })
 end, { desc = '[/] Fuzzily search in current buffer' })
 
+-- diagnostics management
+local vimd = require('vim.diagnostic')
+vim.keymap.set('n', '<leader>do', vimd.open_float)
+vim.keymap.set('n', '<leader>d[', vimd.goto_prev)
+vim.keymap.set('n', '<leader>d]', vimd.goto_next)
+
 ---------------------------------------------------------------------------------------------------
 -- syntax highlight -------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------
@@ -219,6 +225,8 @@ require'nvim-treesitter.configs'.setup {
   -- Automatically install missing parsers when entering buffer
   -- Recommendation: set to false if you don't have `tree-sitter` CLI installed locally
   auto_install = true,
+
+  indent = { enable = true },
 
   highlight = {
     enable = true,
