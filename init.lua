@@ -199,9 +199,9 @@ end, { desc = '[/] Fuzzily search in current buffer' })
 
 -- diagnostics management
 local vimd = require('vim.diagnostic')
-vim.keymap.set('n', '<leader>do', vimd.open_float)
-vim.keymap.set('n', '<leader>d[', vimd.goto_prev)
-vim.keymap.set('n', '<leader>d]', vimd.goto_next)
+vim.keymap.set('n', '<leader>do', vimd.open_float, { desc = '[D]iagnostics [O]pen' })
+vim.keymap.set('n', '<leader>d[', vimd.goto_prev, { desc = '[D]iagnostics Previous' })
+vim.keymap.set('n', '<leader>d]', vimd.goto_next, { desc = '[D]iagnostics Next' })
 
 ---------------------------------------------------------------------------------------------------
 -- syntax highlight -------------------------------------------------------------------------------
