@@ -1,0 +1,67 @@
+{
+    "explorer.confirmDelete": false,
+    "explorer.confirmDragAndDrop": false,
+
+    "editor.tabSize": 4,
+    "editor.inlayHints.enabled": "off",
+    "editor.fontFamily": "Iosevka SS18",
+    "editor.fontLigatures": true,
+    "editor.rulers": [ 100, ],
+    "editor.minimap.enabled": false,
+
+    "dotnet.codeLens.enableReferencesCodeLens": false,
+    "http.proxyStrictSSL": false,
+
+    "terminal.integrated.enableMultiLinePasteWarning": false,
+    "terminal.integrated.fontFamily": "Fira Code",
+
+    "window.zoomLevel": 1,
+
+    "workbench.colorTheme": "Monokai",
+    "workbench.iconTheme": "vs-minimal",
+
+    // GIT
+    "git.confirmSync": false,
+    "git.enableSmartCommit": true,
+    "git.openRepositoryInParentFolders": "never",
+    "git.autofetch": true,
+
+    // VIM STUFF
+    "vim.leader": " ",
+    "vim.textwidth": 80,
+    "vim.smartRelativeLine": true,
+    "vim.normalModeKeyBindings": [
+
+        // Fuzzy Find
+        {
+            "before": ["<leader>", "s", "w"],
+            "commands": ["workbench.action.findInFiles"]
+        },
+        {
+            "before": ["<leader>", "s", "f"],
+            "commands": ["workbench.action.quickOpen"]
+        },
+
+        // workspace manipulation
+        {
+            "before": ["<leader>", "s", "c"],
+            "commands": ["workbench.action.showCommands"]
+        },
+        {
+            "before": ["<leader>", "t", "p"],
+            "commands": ["workbench.action.togglePanel"]
+        },
+        {
+            "before": ["K"],
+            "commands": ["editor.action.showHover"]
+        },
+        {
+            "before": ["<leader>", "f", "e"],
+            "commands": ["workbench.action.focusActiveEditorGroup"]
+        },
+        {
+            "before": ["<leader>", "f", "t"],
+            "commands": ["workbench.action.terminal.focus"]
+        }
+    ],
+}
