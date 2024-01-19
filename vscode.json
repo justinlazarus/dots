@@ -7,6 +7,7 @@
     "editor.fontFamily": "Iosevka SS18",
     "editor.fontLigatures": true,
     "editor.rulers": [ 100, ],
+    "editor.lineNumbers": "relative",
     "editor.minimap.enabled": false,
 
     "dotnet.codeLens.enableReferencesCodeLens": false,
@@ -62,6 +63,14 @@
         {
             "before": ["<leader>", "f", "t"],
             "commands": ["workbench.action.terminal.focus"]
-        }
+        },
+        {
+            "before": ["<leader>", "p", "d"],
+            "commands": ["editor.action.peekDefinition"]
+        },
+        {
+            "before": ["<leader>", "g", "d"],
+            "commands": ["editor.action.goToTypeDefinition"]
+        },
     ],
 }
