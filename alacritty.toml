@@ -1,20 +1,16 @@
 live_config_reload = true
 
-[cursor]
-style = "Block"
-
 [env]
 TERM = "xterm-256color"
 
-[window]
-decorations = "none"
-startup_mode = "Maximized"
-dynamic_padding = true
-opacity = 0.9
+[cursor]
+style = "Block"
 
-[window.padding]
-x = 6
-y = 0
+[window]
+decorations = "Buttonless"
+startup_mode = "Maximized"
+dynamic_padding = false
+opacity = 1.0
 
 [font]
 size = 16.0
@@ -32,11 +28,11 @@ family = "JetBrainsMono Nerd Font"
 style = "Medium Italic"
 
 [font.normal]
-family = "JetBrainsMono Nerd Font"
+family = "Iosevka Nerd Font"
 style = "Medium"
 
 [colors]
-draw_bold_text_with_bright_colors = true
+draw_bold_text_with_bright_colors = false
 
 # TokyoNight Alacritty Colors
 # Default colors
