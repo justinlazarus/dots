@@ -1,240 +1,100 @@
----------------------------------------------------------------------------------------------------
--- plugin management ------------------------------------------------------------------------------
----------------------------------------------------------------------------------------------------
-vim.cmd [[packadd packer.nvim]]
 
-require('packer').startup(function(use)
-  use 'wbthomason/packer.nvim'
-  use('nvim-treesitter/nvim-treesitter', { run = ':TSUpdate' })
-  use('tpope/vim-fugitive')
+------------------------------------------------------------------------------------- OPTIONS
+vim.cmd("let g:netrw_liststyle = 3")
 
-  use {
-    'navarasu/onedark.nvim',
-    priority = 1000,
-    config = function() vim.cmd.colorscheme 'onedark' end,
-  }
+local opt = vim.opt
 
-  use {
-    'nvim-telescope/telescope.nvim',
-    tag = '0.1.4',
-    requires = { {'nvim-lua/plenary.nvim'} }
-  }
+vim.g.have_nerd_font = true
+vim.o.autoindent = true
+vim.o.foldcolumn = "1"
+vim.o.foldenable = true
+vim.o.foldlevel = 99
+vim.o.foldlevelstart = 99
+vim.o.tabstop = 4
+vim.o.termguicolors = true
+vim.o.expandtab = true
+vim.o.softtabstop = 4
+vim.o.encoding = "utf-8"
 
-  use {
-    'nvim-lualine/lualine.nvim',
-    opts = {
-      icons_enabled = false,
-      theme = 'onedark',
-      component_separators = '|',
-      section_separators = '',
-      }
-  }
+opt.backspace = "indent,eol,start"
+opt.breakindent = true
+opt.clipboard = "unnamedplus"
+opt.colorcolumn = "110"
+opt.cursorline = true
+opt.hlsearch = true
+opt.ignorecase = true
+opt.inccommand = "split"
+opt.list = true
+opt.listchars = { tab = "» ", trail = "·", nbsp = "␣" }
+opt.mouse = "a"
+opt.number = true
+opt.relativenumber = true
+opt.scrolloff = 10
+opt.shiftwidth = 4
+opt.showmode = false
+opt.signcolumn = "yes"
+opt.smartcase = true
+opt.smartindent = true
+opt.splitbelow = true
+opt.splitright = true
+opt.timeoutlen = 300
+opt.undofile = true
+opt.updatetime = 250
 
-  use {
-    'm4xshen/hardtime.nvim',
-    requires = {
-      {'MunifTanjim/nui.nvim'},
-      {'nvim-lua/plenary.nvim'},
-    },
-    opts = {}
-  }
+------------------------------------------------------------------------------------- KEYMAPS
+vim.g.mapleader = " "
+vim.g.maplocalleader = " "
 
-  use {
-    'VonHeikemen/lsp-zero.nvim',
-    branch = 'v3.x',
-    requires = {
-      {'williamboman/mason.nvim'},
-      {'williamboman/mason-lspconfig.nvim'},
-      {'neovim/nvim-lspconfig'},
-      {'hrsh7th/nvim-cmp'},
-      {'hrsh7th/cmp-nvim-lsp'},
-      {'L3MON4D3/LuaSnip'},
-      }
-  }
-end)
+local map = vim.keymap
 
----------------------------------------------------------------------------------------------------
--- plugin configuration ---------------------------------------------------------------------------
----------------------------------------------------------------------------------------------------
-local lsp_zero = require('lsp-zero')
-local cmp = require('cmp')
-local lspcfg = require('lspconfig')
-local cmp_action = require('lsp-zero').cmp_action()
-local cmp_select = {behavior = cmp.SelectBehavior.Select}
+map.set("n", "<Esc>", "<cmd>nohlsearch<CR>")
 
-require('hardtime').setup()
+-- File and folder management
+map.set("n", "<leader>fe", "<cmd>Oil<CR>", { desc = "[F]ilesystem [E]xplore" })
 
--- status line
-require('lualine').setup{ options = { theme = 'onedark' } }
+-- Diffview
+map.set("n", "<leader>vh", "<cmd>DiffviewFileHistory<CR>", { desc = "[D]iffview [H]istory" })
+map.set("n", "<leader>vf", "<cmd>DiffviewFileHistory %<CR>", { desc = "[D]iffview [F]ile History" })
+map.set("n", "<leader>vc", "<cmd>DiffviewClose<CR>", { desc = "[D]iffview [C]lose" })
 
--- mason language server manager
-require("mason").setup({ PATH = "prepend" })
+-- Buffer keymaps
+map.set("n", "<leader>bd", "<cmd>bd<CR>", { desc = "[B]uffer [d]elete" })
 
-require("hardtime").setup()
+-- Diagnostic keymaps
+map.set("n", "]d", function()
+	vim.diagnostic.jump({ count = 1 })
+end, { desc = "Next diagnostic message" })
+map.set("n", "[d", function()
+	vim.diagnostic.jump({ count = -1 })
+end, { desc = "Previous diagnostic message" })
+map.set("n", "<leader>e", vim.diagnostic.open_float, { desc = "Show diagnostic [E]rror messages" })
+map.set("n", "<leader>q", vim.diagnostic.setloclist, { desc = "Open diagnostic [Q]uickfix list" })
 
-lsp_zero.on_attach(function(_, bufnr)
-  lsp_zero.default_keymaps({buffer = bufnr})
-end)
+map.set("t", "<Esc><Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
 
--- language server style
-vim.lsp.handlers['textDocument/hover'] = vim.lsp.with(
-  vim.lsp.handlers.hover,
-  {border = 'rounded'}
-)
+-- Window commands
+map.set("n", "<C-h>", "<C-w><C-h>", { desc = "Move focus to the left window" })
+map.set("n", "<C-l>", "<C-w><C-l>", { desc = "Move focus to the right window" })
+map.set("n", "<C-j>", "<C-w><C-j>", { desc = "Move focus to the lower window" })
+map.set("n", "<C-k>", "<C-w><C-k>", { desc = "Move focus to the upper window" })
 
-vim.lsp.handlers['textDocument/signatureHelp'] = vim.lsp.with(
-  vim.lsp.handlers.signature_help,
-  {border = 'rounded'}
-)
-
--- LUA language server
-lspcfg.lua_ls.setup({
-  settings = {
-    Lua = {
-      diagnostics = {
-        globals = { 'vim' }
-      }
-    }
-  }
-});
-
--- C# language server
-lspcfg.omnisharp.setup({
-  cmd = { "omnisharp", "--languageserver", "--hostPID", tostring(vim.fn.getpid()) }
-});
-
--- Completion Engine
-cmp.setup({
-  sources = {
-    {name = 'path'},
-    {name = 'nvim_lsp'},
-    {name = 'nvim_lua'},
-  },
-  mapping = cmp.mapping.preset.insert({
-
-
-    -- Enter key confirms completion
-    ['<CR>'] = cmp.mapping.confirm({ select = true }),
-
-    -- Ctrl+Space triggers completion
-    ["<C-Space>"] = cmp.mapping.complete(),
-
-    -- Navigation
-    ['<C-f>'] = cmp_action.luasnip_jump_forward(),
-    ['<C-b>'] = cmp_action.luasnip_jump_backward(),
-
-    ['<C-j>'] = cmp.mapping.select_next_item(cmp_select),
-    ['<C-k>'] = cmp.mapping.select_prev_item(cmp_select),
-
-    ['<C-u>'] = cmp.mapping.scroll_docs(-4),
-    ['<C-d>'] = cmp.mapping.scroll_docs(4),
-  })
+-- Highlight yanks
+vim.api.nvim_create_autocmd("TextYankPost", {
+	desc = "Highlight when yanking (copying) text",
+	group = vim.api.nvim_create_augroup("kickstart-highlight-yank", { clear = true }),
+	callback = function()
+		vim.highlight.on_yank()
+	end,
 })
 
----------------------------------------------------------------------------------------------------
--- vim sets ---------------------------------------------------------------------------------------
----------------------------------------------------------------------------------------------------
-vim.opt.nu = true
-vim.opt.relativenumber = true
+------------------------------------------------------------------------------------- LAZY
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+if not vim.loop.fs_stat(lazypath) then
+    local lazyrepo = "https://github.com/folke/lazy.nvim.git"
+    vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
+end ---@diagnostic disable-next-line: undefined-field
+vim.opt.rtp:prepend(lazypath)
 
-vim.tabstop = 4
-vim.softtabstop = 4
-vim.shiftwidth = 4
-vim.expandtab = true
-vim.textwidth = 80
-vim.autoindent = true
+require("lazy").setup("djp.plugins")
 
-vim.opt.wrap = false
-
-vim.swapfile = false
-vim.backup = false
-vim.opt.undodir = os.getenv("HOME") .. "/.vim/undodir"
-vim.opt.undofile = true
-
-vim.opt.hlsearch = false
-vim.opt.incsearch = true
-
-vim.opt.termguicolors = true
-
-vim.opt.scrolloff = 8
-vim.opt.signcolumn = "yes"
-vim.opt.isfname:append("@-@")
-
-vim.opt.updatetime = 50
-
-vim.opt.colorcolumn = "100"
-
----------------------------------------------------------------------------------------------------
--- key maps ---------------------------------------------------------------------------------------
----------------------------------------------------------------------------------------------------
-
-vim.g.mapleader = ' '
-vim.g.maplocalleader = ' '
-
--- fugitive
-vim.keymap.set("n", "<leader>gs", vim.cmd.Git);
-
--- netrw
-vim.keymap.set("n", "<leader>pv", vim.cmd.Ex)
-
--- telescope
-local bi = require('telescope.builtin')
-pcall(require('telescope').load_extension, 'fzf')
-vim.keymap.set('n', '<leader>?', bi.oldfiles, { desc = '[?] Find recently opened files' })
-vim.keymap.set('n', '<leader><space>', bi.buffers, { desc = '[ ] Find existing buffers' })
-vim.keymap.set('n', '<leader>gf', bi.git_files, { desc = 'Search [G]it [F]iles' })
-vim.keymap.set('n', '<leader>sf', bi.find_files, { desc = '[S]earch [F]iles' })
-vim.keymap.set('n', '<leader>sh', bi.help_tags, { desc = '[S]earch [H]elp' })
-vim.keymap.set('n', '<leader>sw', bi.grep_string, { desc = '[S]earch current [W]ord' })
-vim.keymap.set('n', '<leader>sg', bi.live_grep, { desc = '[S]earch by [G]rep' })
-vim.keymap.set('n', '<leader>sd', bi.diagnostics, { desc = '[S]earch [D]iagnostics' })
-vim.keymap.set('n', '<leader>sr', bi.resume, { desc = '[S]earch [R]esume' })
-
-vim.keymap.set('n', '<leader>/', function()
-  bi.current_buffer_fuzzy_find(require('telescope.themes').get_dropdown {
-    winblend = 10,
-    previewer = false,
-  })
-end, { desc = '[/] Fuzzily search in current buffer' })
-
--- diagnostics management
-local vimd = require('vim.diagnostic')
-vim.keymap.set('n', '<leader>do', vimd.open_float, { desc = '[D]iagnostics [O]pen' })
-vim.keymap.set('n', '<leader>d[', vimd.goto_prev, { desc = '[D]iagnostics Previous' })
-vim.keymap.set('n', '<leader>d]', vimd.goto_next, { desc = '[D]iagnostics Next' })
-
----------------------------------------------------------------------------------------------------
--- syntax highlight -------------------------------------------------------------------------------
----------------------------------------------------------------------------------------------------
-require'nvim-treesitter.configs'.setup {
-  ensure_installed = {
-	  "javascript",
-	  "typescript",
-	  "c",
-	  "c_sharp",
-	  "lua",
-	  "vim",
-	  "vimdoc",
-	  "query",
-	  "rust",
-  },
-
-  -- Install parsers synchronously (only applied to `ensure_installed`)
-  sync_install = false,
-
-  -- Automatically install missing parsers when entering buffer
-  -- Recommendation: set to false if you don't have `tree-sitter` CLI installed locally
-  auto_install = true,
-
-  indent = { enable = true },
-
-  highlight = {
-    enable = true,
-
-    -- Set this to `true` if you depend on 'syntax' being enabled (like for indentation).
-    -- Using this option may slow down your editor, and you may see some duplicate highlights.
-    -- Instead of true it can also be a list of languages
-    additional_vim_regex_highlighting = false,
-  },
-}
 
