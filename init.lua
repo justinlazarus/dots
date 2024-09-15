@@ -17,7 +17,6 @@ vim.o.encoding = "utf-8"
 opt.backspace = "indent,eol,start"
 opt.breakindent = true
 opt.clipboard = "unnamedplus"
-opt.colorcolumn = "110"
 opt.cursorline = true
 opt.hlsearch = true
 opt.ignorecase = true
@@ -583,7 +582,6 @@ function GetCostcoPath()
 	local is_costco = path:find("intl%-depot") or false
 	local tokens = {}
 	local filename = ""
-	local depot_icon = "󰟉"
 	local project = ""
 
 	if not is_costco then
@@ -602,9 +600,9 @@ function GetCostcoPath()
 
 	local domain = tokens[last_intl + 1]
 	if domain == "apps" or domain == "libs" then
-		project = tokens[last_intl + 2]:gsub("Costco.I18N.Depot.", "") .. " :: "
+		project = tokens[last_intl + 2]:gsub("Costco.I18N.Depot.", "")
 	else
-		project = tokens[last_intl + 2] .. " :: "
+		project = tokens[last_intl + 2]
 	end
 
 	for i = last_intl + 3, #tokens do
@@ -615,5 +613,5 @@ function GetCostcoPath()
 		end
 	end
 
-	return depot_icon .. "  " .. domain .. " :: " .. project .. filename
+	return string.format(" 󰟉   %s  %s  %s ", domain, project, filename)
 end
