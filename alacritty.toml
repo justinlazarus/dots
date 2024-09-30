@@ -16,20 +16,20 @@ opacity = 1.0
 size = 16.0
 
 [font.bold]
-family = "JetBrainsMono Nerd Font"
-style = "Heavy"
+family = "Hack Nerd Font"
+style = "Bold"
 
 [font.bold_italic]
-family = "JetBrainsMono Nerd Font"
-style = "Heavy Italic"
+family = "Hack Nerd Font"
+style = "Bold Italic"
 
 [font.italic]
-family = "JetBrainsMono Nerd Font"
-style = "Medium Italic"
+family = "Hack Nerd Font"
+style = "Italic"
 
 [font.normal]
-family = "Iosevka Nerd Font"
-style = "Medium"
+family = "Hack Nerd Font"
+style = "Regular"
 
 [colors]
 draw_bold_text_with_bright_colors = false

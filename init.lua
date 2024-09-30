@@ -82,7 +82,6 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 		vim.highlight.on_yank()
 	end,
 })
-
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not vim.loop.fs_stat(lazypath) then
 	local lazyrepo = "https://github.com/folke/lazy.nvim.git"
@@ -101,7 +100,35 @@ require("lazy").setup({
 			vim.cmd.hi("Comment gui=none")
 		end,
 	},
-
+	{
+		"nvim-neorg/neorg",
+		lazy = false,
+		version = "*",
+		config = function()
+			require("neorg").setup({
+				load = {
+					["core.defaults"] = {},
+					["core.concealer"] = {},
+					["core.completion"] = {
+						config = {
+							engine = "nvim-cmp",
+						},
+					},
+					["core.integrations.nvim-cmp"] = {},
+					["core.summary"] = {},
+					["core.dirman"] = {
+						config = {
+							workspaces = {
+								log = "~/log",
+							},
+							default_workspace = "log",
+						},
+					},
+				},
+			})
+			vim.wo.conceallevel = 2
+		end,
+	},
 	{
 		"stevearc/conform.nvim",
 		opts = {
@@ -317,6 +344,7 @@ require("lazy").setup({
 					{ name = "nvim_lsp" },
 					{ name = "luasnip" },
 					{ name = "path" },
+					{ name = "neorg" },
 				},
 			})
 		end,
