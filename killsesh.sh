@@ -1,7 +1,6 @@
 #!/bin/bash
 
-worktree_dir="$HOME/intl-depot.git/worktrees"
-bare_repo_dir="$HOME/intl-depot.git"
+worktree_dir="$HOME/work/repos"
 
 if [ ! -d "$worktree_dir" ]; then
     echo "Directory $worktree_dir does not exist."

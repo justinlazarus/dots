@@ -1,7 +1,6 @@
 #!/bin/bash
 
-worktree_dir="$HOME/intl-depot.git/worktrees"
-bare_repo_dir="$HOME/intl-depot.git"
+worktree_dir="$HOME/work/repos"
 
 if [ ! -d "$worktree_dir" ]; then
     echo "Directory $worktree_dir does not exist."
@@ -11,7 +10,7 @@ fi
 for subdir in "$worktree_dir"/*/; do
     if [ -d "$subdir" ]; then
         session_name=$(basename "$subdir")
-        session_dir="$bare_repo_dir/$session_name/intl-depot/"
+        session_dir="$worktree_dir/$session_name/intl-depot/"
 
         # Check if a session with the same name already exists
         tmux has-session -t "$session_name" 2>/dev/null
