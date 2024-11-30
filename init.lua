@@ -90,7 +90,18 @@ end ---@diagnostic disable-next-line: undefined-field
 vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
-
+	{
+		"utilyre/barbecue.nvim",
+		name = "barbecue",
+		version = "*",
+		dependencies = {
+			"SmiteshP/nvim-navic",
+			"nvim-tree/nvim-web-devicons", -- optional dependency
+		},
+		opts = {
+			-- configurations go here
+		},
+	},
 	{ "williamboman/mason.nvim", opts = {} },
 	{
 		"folke/tokyonight.nvim",
@@ -523,7 +534,7 @@ require("lazy").setup({
 			require("telescope").setup({
 				defaults = {
 					prompt_prefix = "   ",
-					path_display = { "truncate" },
+					path_display = { "smart" },
 					selection_caret = " ",
 					entry_prefix = " ",
 					sorting_strategy = "ascending",
@@ -541,10 +552,10 @@ require("lazy").setup({
 				},
 				pickers = {
 					lsp_references = {
-						path_display = { "truncate" },
+						show_line = false,
 					},
 					lsp_implementations = {
-						path_display = { "truncate" },
+						show_line = false,
 					},
 				},
 			})
