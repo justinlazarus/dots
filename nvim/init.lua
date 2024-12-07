@@ -544,6 +544,9 @@ require("lazy").setup({
 			vim.keymap.set("n", "<leader>gu", builtin.git_bcommits, { desc = "[G]it b[u]ffer commits" })
 			vim.keymap.set("n", "<leader>gh", builtin.git_stash, { desc = "[G]it Stas[h]" })
 			vim.keymap.set("n", "<leader>gf", builtin.git_files, { desc = "[G]it [F]iles" })
+			vim.keymap.set("n", "<leader>gm", function()
+				vim.cmd("Gvdiffsplit origin/main")
+			end, { desc = "[G]it diff [m]ain" })
 		end,
 	},
 
@@ -619,7 +622,7 @@ require("lazy").setup({
 	--------------------------------------------------------------------------------------------- NOICE
 	{
 		"folke/noice.nvim",
-		enabled = false,
+		enabled = true,
 		event = "VeryLazy",
 		dependencies = {
 			"MunifTanjim/nui.nvim",
@@ -633,6 +636,9 @@ require("lazy").setup({
 						["vim.lsp.util.stylize_markdown"] = true,
 						["cmp.entry.get_documentation"] = true,
 					},
+				},
+				notify = {
+					enabled = false,
 				},
 				presets = {
 					bottom_search = true,
