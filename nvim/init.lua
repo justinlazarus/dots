@@ -650,27 +650,6 @@ require("lazy").setup({
 			})
 		end,
 	},
-
-	--------------------------------------------------------------------------------------------- MINI
-	{
-		"echasnovski/mini.nvim",
-		config = function()
-			require("mini.ai").setup({ n_lines = 500 })
-			require("mini.surround").setup()
-			local statusline = require("mini.statusline")
-			statusline.setup({ use_icons = vim.g.have_nerd_font })
-			statusline.section_git = function() end
-			statusline.section_location = function()
-				return "%2l:%-2v"
-			end
-			statusline.section_filename = function()
-				return GetCostcoPath()
-			end
-			statusline.inactive = function()
-				return GetCostcoPath()
-			end
-		end,
-	},
 })
 
 --------------------------------------------------------------------------------------------- RANDOM FUNCS
