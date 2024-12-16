@@ -202,6 +202,6 @@ alt-shift-k = ['join-with up', 'mode main']
 alt-shift-l = ['join-with right', 'mode main']
 
 # use aerospace list-apps command to show how aerospace gets app-id
-[[on-window-detected]]
-if.app-id = 'com.apple.Safari'
-run = "move-node-to-workspace 1"
+#[[on-window-detected]]
+#if.app-id = 'com.apple.Safari'
+#run = "move-node-to-workspace 1"
