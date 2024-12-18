@@ -1,16 +1,24 @@
 #!/bin/bash
 
 worktree_dir="$HOME/work/repos"
+logs_dir="$HOME/work/logs"
 
 if [ ! -d "$worktree_dir" ]; then
     echo "Directory $worktree_dir does not exist."
     exit 1
 fi
 
+# Add a session for each directory in the worktree directory (one for each working tree)
 for subdir in "$worktree_dir"/*/; do
     if [ -d "$subdir" ]; then
+
+
         session_name=$(basename "$subdir")
         session_dir="$worktree_dir/$session_name/intl-depot/"
+
+        if [ $session_name = "intl-depot.git" ]; then
+            continue
+        fi
 
         # Check if a session with the same name already exists
         tmux has-session -t "$session_name" 2>/dev/null
@@ -33,3 +41,15 @@ for subdir in "$worktree_dir"/*/; do
         fi
     fi
 done
+
+# Add a session for logs
+logs_session_name="logs"
+tmux has-session -t "$logs_session_name" 2>/dev/null
+if [ $? -ne 0 ]; then
+    tmux new-session -d -s "$logs_session_name" -c "$logs_dir" -n "daily"
+    tmux new-window -t "$logs_session_name" -n "on-call" -c "$logs_dir"
+    tmux select-window -t "$logs_session_name":0
+    echo "Created new tmux session: $logs_session_name with 2 windows"
+else
+    echo "Logs session already exists"
+fi
