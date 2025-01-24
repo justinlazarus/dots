@@ -120,10 +120,10 @@ require("lazy").setup({
 
 	--------------------------------------------------------------------------------------------- THEME
 	{
-		"folke/tokyonight.nvim",
+		"catppuccin/nvim",
 		priority = 1000,
 		init = function()
-			vim.cmd.colorscheme("tokyonight-night")
+			vim.cmd.colorscheme("catppuccin")
 			vim.cmd.hi("Comment gui=none")
 		end,
 	},
@@ -471,6 +471,8 @@ require("lazy").setup({
 			{ "nvim-telescope/telescope-live-grep-args.nvim", version = "^1.0.0" },
 		},
 		config = function()
+			local lga_actions = require("telescope-live-grep-args.actions")
+
 			require("telescope").setup({
 				defaults = {
 					prompt_prefix = "   ",
@@ -497,6 +499,19 @@ require("lazy").setup({
 					},
 					lsp_implementations = {
 						path_display = { "truncate" },
+					},
+				},
+				extensions = {
+					live_grep_args = {
+						auto_quoting = true,
+						mappings = {
+							i = {
+								["<C-k>"] = lga_actions.quote_prompt(),
+								["<C-i>"] = lga_actions.quote_prompt({ postfix = " --iglob " }),
+								-- freeze the current list and start a fuzzy search in the frozen list
+								["<C-space>"] = lga_actions.to_fuzzy_refine,
+							},
+						},
 					},
 				},
 			})

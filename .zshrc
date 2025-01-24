@@ -8,21 +8,20 @@ fi
 export NVM_DIR="$HOME/.nvm"
 [ -s "$HOMEBREW_PREFIX/opt/nvm/nvm.sh" ] && \. "$HOMEBREW_PREFIX/opt/nvm/nvm.sh" # This loads nvm
 [ -s "$HOMEBREW_PREFIX/opt/nvm/etc/bash_completion.d/nvm" ] && \. "$HOMEBREW_PREFIX/opt/nvm/etc/bash_completion.d/nvm" # This loads nvm bash_completion
+export PATH="$HOME/.local/share/nvim/mason/bin:$PATH"
+export PATH="/opt/homebrew/bin:$PATH"
+export DOTNET_ConnectionStrings__Database="Data Source=localhost,1433;Database=intl-depot-db;Integrated Security=false;User ID=SA;Password=Intl@depot1;TrustServerCertificate=True;"
+export DOTNET_MessagingOptions__Namespace="amqp://guest:guest@localhost:5672/"
 
-alias ll='ls -alF'
 source /opt/homebrew/share/powerlevel10k/powerlevel10k.zsh-theme
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-
-# BEGIN opam configuration
-# This is useful if you're using opam as it adds:
-#   - the correct directories to the PATH
-#   - auto-completion for the opam binary
-# This section can be safely removed at any time if needed.
-[[ ! -r '/Users/djpoo/.opam/opam-init/init.zsh' ]] || source '/Users/djpoo/.opam/opam-init/init.zsh' > /dev/null 2> /dev/null
-# END opam configuration
-
 # Set up fzf key bindings and fuzzy completion
 source <(fzf --zsh)
+
+# dotnet stuff for work
+
+alias ll='ls -alF'
+alias ff="fzf --style full --preview 'fzf-preview.sh {}'"
