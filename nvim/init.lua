@@ -12,9 +12,3 @@ end
 require("mini.deps").setup()
 
 _G.Config = {}
-
---require("functions")
---require("options")
---require("mapping")
---require("mini")
---require("plugins")

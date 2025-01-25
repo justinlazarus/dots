@@ -181,3 +181,8 @@ later(function()
 	add("williamboman/mason.nvim")
 	require("mason").setup()
 end)
+
+later(function()
+	add("rachartier/tiny-inline-diagnostic.nvim")
+	require("tiny-inline-diagnostic").setup()
+end)

@@ -8,7 +8,11 @@ end
 
 -- stylua: ignore start
 now(function() require("mini.starter").setup() end)
-now(function() require("mini.basics").setup() end)
+now(function() require("mini.basics").setup({
+  mappings = {
+    windows = true
+  }
+}) end)
 now(function() require("mini.icons").setup() end)
 now(function() require("mini.tabline").setup() end)
 now(function() require("mini.statusline").setup() end)
@@ -18,6 +22,8 @@ now(function()
 end)
 
 later(function() require('mini.git').setup() end)
+later(function() require('mini.cursorword').setup() end)
+later(function() require('mini.visits').setup() end)
 later(function() require('mini.diff').setup() end)
 later(function() require('mini.indentscope').setup() end)
 later(function() require("mini.bufremove").setup() end)
@@ -30,6 +36,9 @@ later(function() require("mini.colors").setup() end)
 later(function() require("mini.pick").setup({
   mappings = {
     choose_all = { char = '<C-q>', func = choose_all },
+
+    -- the original mapping is <C-space> which conflicts with tmux leader
+    refine = '<C-f>',
   },
 }) end)
 -- stylua: ignore end
