@@ -364,3 +364,51 @@ end
 Config.luals_unique_definition = function()
 	return vim.lsp.buf.definition({ on_list = on_list })
 end
+
+function FindLastTokenIndex(tokens, target)
+	for i = #tokens, 1, -1 do
+		if tokens[i] == target then
+			return i, tokens[i]
+		end
+	end
+	return nil
+end
+
+Config.get_costco_path = function()
+	local path = vim.fn.expand("%:p")
+	local is_costco = path:find("intl%-depot") or false
+	local tokens = {}
+	local filename = ""
+	local project = ""
+
+	if not is_costco then
+		return path
+	end
+
+	for token in path:gmatch("([^/]+)") do
+		table.insert(tokens, token)
+	end
+
+	local last_intl = FindLastTokenIndex(tokens, "intl-depot")
+
+	if #tokens <= last_intl + 2 then
+		return path
+	end
+
+	local domain = tokens[last_intl + 1]
+	if domain == "apps" or domain == "libs" then
+		project = tokens[last_intl + 2]:gsub("Costco.I18N.Depot.", "")
+	else
+		project = tokens[last_intl + 2]
+	end
+
+	for i = last_intl + 3, #tokens do
+		if i == #tokens then
+			filename = filename .. tokens[i]
+		else
+			filename = filename .. tokens[i] .. "/"
+		end
+	end
+
+	return string.format(" 󰟉   %s  %s  %s ", domain, project, filename)
+end

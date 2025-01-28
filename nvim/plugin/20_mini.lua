@@ -15,7 +15,13 @@ now(function() require("mini.basics").setup({
 }) end)
 now(function() require("mini.icons").setup() end)
 now(function() require("mini.tabline").setup() end)
-now(function() require("mini.statusline").setup() end)
+now(function()
+  local statusline = require("mini.statusline")
+  statusline.setup()
+  statusline.section_git = function() end
+  statusline.section_filename = function() return Config.get_costco_path() end
+  statusline.inactive = function() return Config.get_costco_path() end
+end)
 now(function()
 	require("mini.notify").setup()
 	vim.notify = require("mini.notify").make_notify()
@@ -38,7 +44,7 @@ later(function() require("mini.pick").setup({
     choose_all = { char = '<C-q>', func = choose_all },
 
     -- the original mapping is <C-space> which conflicts with tmux leader
-    refine = '<C-f>',
+    refine = '<C-]>',
   },
 }) end)
 -- stylua: ignore end
@@ -102,6 +108,6 @@ later(function()
       { mode = 'n', keys = 'z' },        -- `z` key
       { mode = 'x', keys = 'z' },
     },
-    window = { config = { border = 'double' } },
+    window = { config = { anchor = 'NW', border = 'double' } },
   })
 end)
