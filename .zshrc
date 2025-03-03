@@ -21,7 +21,5 @@ source /opt/homebrew/share/powerlevel10k/powerlevel10k.zsh-theme
 # Set up fzf key bindings and fuzzy completion
 source <(fzf --zsh)
 
-# dotnet stuff for work
-
 alias ll='ls -alF'
 alias ff="fzf --style full --preview 'fzf-preview.sh {}'"

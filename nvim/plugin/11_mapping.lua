@@ -40,7 +40,7 @@ end
 
 -- b is for 'buffer'
 nmap_leader('ba', '<Cmd>b#<CR>',                                 'Alternate')
-nmap_leader('bd', '<Cmd>lua MiniBufremove.delete()<CR>',         'Delete')
+nmap_leader('bb', '<Cmd>lua MiniBufremove.delete()<CR>',         'Delete')
 nmap_leader('bD', '<Cmd>lua MiniBufremove.delete(0, true)<CR>',  'Delete!')
 nmap_leader('bs', '<Cmd>lua Config.new_scratch_buffer()<CR>',    'Scratch')
 nmap_leader('bw', '<Cmd>lua MiniBufremove.wipeout()<CR>',        'Wipeout')
@@ -114,5 +114,8 @@ nmap_leader('gl', '<Cmd>' .. git_log_cmd .. '<CR>',               'Log')
 nmap_leader('gL', '<Cmd>' .. git_log_cmd .. ' --follow -- %<CR>', 'Log buffer')
 nmap_leader('go', '<Cmd>lua MiniDiff.toggle_overlay()<CR>',       'Toggle overlay')
 nmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>',        'Show at cursor')
-
 xmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>',  'Show at selection')
+
+-- o is for other
+nmap_leader('oj', 'o<Esc>',                                      'Normal mode newline below')
+nmap_leader('ok', 'O<Esc>',                                      'Normal mode newline above')
