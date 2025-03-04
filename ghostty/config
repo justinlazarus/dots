@@ -1,7 +1,8 @@
+theme = catppuccin-mocha
+
 font-family = "Iosevka Nerd Font Mono"
 font-size = 16
 font-thicken = false
 font-style = light
-theme = catppuccin-macchiato
 macos-titlebar-style = hidden
 copy-on-select = clipboard
