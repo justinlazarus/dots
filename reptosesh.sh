@@ -33,7 +33,7 @@ for subdir in "$worktree_dir"/*/; do
             tmux new-window -t "$session_name" -n "git" -c "$session_dir"
 
             # select the first window
-            tmux select-window -t "$session_name":0
+            tmux select-window -t "$session_name":1
 
             echo "Created new tmux session: $session_name with 3 windows"
         else
@@ -48,7 +48,7 @@ tmux has-session -t "$logs_session_name" 2>/dev/null
 if [ $? -ne 0 ]; then
     tmux new-session -d -s "$logs_session_name" -c "$logs_dir" -n "daily"
     tmux new-window -t "$logs_session_name" -n "on-call" -c "$logs_dir"
-    tmux select-window -t "$logs_session_name":0
+    tmux select-window -t "$logs_session_name":1
     echo "Created new tmux session: $logs_session_name with 2 windows"
 else
     echo "Logs session already exists"
