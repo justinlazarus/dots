@@ -6,4 +6,5 @@ font-thicken = false
 font-style = light
 macos-titlebar-style = hidden
 copy-on-select = clipboard
+clipboard-paste-protection = false
 keybind = shift+enter=text:\n
