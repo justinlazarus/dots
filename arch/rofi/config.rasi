@@ -1,0 +1,116 @@
+configuration {
+    modi: "drun,run,window";
+    show-icons: true;
+    terminal: "ghostty";
+    drun-display-format: "{icon} {name}";
+    disable-history: false;
+    hide-scrollbar: true;
+    kb-row-up: "Up,k";
+    kb-row-down: "Down,j";
+    kb-cancel: "Escape,q";
+    kb-row-first: "Home,g";
+    kb-row-last: "End,G";
+}
+
+* {
+    background-color: transparent;
+    text-color: #e0def4;
+    font: "JetBrains Mono Nerd Font 14";
+}
+
+window {
+    location: center;
+    anchor: center;
+    width: 600px;
+    border-radius: 15px;
+    background-color: #191724;
+    border: 3px;
+    border-color: #26233a;
+    padding: 15px;
+}
+
+mainbox {
+    spacing: 15px;
+    background-color: transparent;
+    children: [ "inputbar", "listview" ];
+}
+
+inputbar {
+    spacing: 10px;
+    padding: 8px 12px;
+    border: 2px;
+    border-color: #26233a;
+    border-radius: 10px;
+    background-color: #1f1d2e;
+    text-color: #e0def4;
+    children: [ "prompt", "entry" ];
+}
+
+prompt {
+    background-color: inherit;
+    text-color: #c4a7e7;
+}
+
+entry {
+    background-color: inherit;
+    text-color: inherit;
+    cursor: text;
+    placeholder: "Search...";
+    placeholder-color: #6e6a86;
+}
+
+listview {
+    columns: 1;
+    lines: 10;
+    cycle: true;
+    dynamic: true;
+    scrollbar: false;
+    layout: vertical;
+    spacing: 4px;
+    background-color: transparent;
+    text-color: #e0def4;
+}
+
+element {
+    spacing: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background-color: transparent;
+    text-color: #e0def4;
+}
+
+element normal.normal {
+    background-color: transparent;
+    text-color: #e0def4;
+}
+
+element alternate.normal {
+    background-color: transparent;
+    text-color: #e0def4;
+}
+
+element selected.normal {
+    background-color: transparent;
+    text-color: #c4a7e7;
+    border: 2px;
+    border-color: #26233a;
+}
+
+element selected.alternate {
+    background-color: transparent;
+    text-color: #c4a7e7;
+    border: 2px;
+    border-color: #26233a;
+}
+
+element-icon {
+    background-color: transparent;
+    text-color: inherit;
+    size: 24px;
+}
+
+element-text {
+    background-color: transparent;
+    text-color: inherit;
+    vertical-align: 0.5;
+}

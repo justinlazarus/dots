@@ -86,7 +86,7 @@
   "theme.osd.margins": "70px 0px 0px 0px",
   "theme.osd.orientation": "horizontal",
   "theme.osd.location": "top",
-  "menus.dashboard.powermenu.avatar.image": "/home/djlaz/Pictures/Profile/djlaz.png",
+  "menus.dashboard.powermenu.avatar.image": "~/Pictures/Profile/djlaz.png",
   "theme.bar.menus.menu.dashboard.profile.radius": "10em",
   "theme.bar.menus.opacity": 100,
   "theme.bar.transparent": true,

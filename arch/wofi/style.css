@@ -1,4 +1,4 @@
-/* Catppuccin Mocha Theme for Wofi */
+/* Rosé Pine Theme for Wofi */
 
 * {
     font-family: "JetBrains Mono Nerd Font";
@@ -8,25 +8,25 @@
 /* Main window */
 window {
     margin: 0px;
-    border: 2px solid #cba6f7;
+    border: 2px solid #c4a7e7;
     border-radius: 15px;
-    background-color: #1e1e2e;
+    background-color: #191724;
     font-family: "JetBrains Mono Nerd Font";
 }
 
 /* Input field */
 #input {
     margin: 5px;
-    border: 2px solid #45475a;
+    border: 2px solid #26233a;
     border-radius: 10px;
-    color: #cdd6f4;
-    background-color: #313244;
+    color: #e0def4;
+    background-color: #1f1d2e;
     padding: 8px;
     font-size: 14px;
 }
 
 #input:focus {
-    border: 2px solid #89b4fa;
+    border: 2px solid #31748f;
     box-shadow: none;
 }
 
@@ -54,7 +54,7 @@ window {
 #text {
     margin: 5px;
     border: none;
-    color: #cdd6f4;
+    color: #e0def4;
     font-weight: bold;
 }
 
@@ -68,13 +68,13 @@ window {
 }
 
 #entry:selected {
-    background-color: #45475a;
-    border: 2px solid #cba6f7;
-    color: #cdd6f4;
+    background-color: #403d52;
+    border: 2px solid #c4a7e7;
+    color: #e0def4;
 }
 
 #entry:selected #text {
-    color: #cdd6f4;
+    color: #e0def4;
 }
 
 /* Icons */
