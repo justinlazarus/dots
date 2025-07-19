@@ -1,0 +1,84 @@
+/* Catppuccin Mocha Theme for Wofi */
+
+* {
+    font-family: "JetBrains Mono Nerd Font";
+    font-size: 14px;
+}
+
+/* Main window */
+window {
+    margin: 0px;
+    border: 2px solid #cba6f7;
+    border-radius: 15px;
+    background-color: #1e1e2e;
+    font-family: "JetBrains Mono Nerd Font";
+}
+
+/* Input field */
+#input {
+    margin: 5px;
+    border: 2px solid #45475a;
+    border-radius: 10px;
+    color: #cdd6f4;
+    background-color: #313244;
+    padding: 8px;
+    font-size: 14px;
+}
+
+#input:focus {
+    border: 2px solid #89b4fa;
+    box-shadow: none;
+}
+
+/* Inner box */
+#inner-box {
+    margin: 5px;
+    border: none;
+    background-color: transparent;
+}
+
+/* Outer box */
+#outer-box {
+    margin: 5px;
+    border: none;
+    background-color: transparent;
+}
+
+/* Scroll area */
+#scroll {
+    margin: 0px;
+    border: none;
+}
+
+/* Text in entries */
+#text {
+    margin: 5px;
+    border: none;
+    color: #cdd6f4;
+    font-weight: bold;
+}
+
+/* Individual entries */
+#entry {
+    background-color: transparent;
+    border: none;
+    border-radius: 8px;
+    margin: 2px;
+    padding: 8px;
+}
+
+#entry:selected {
+    background-color: #45475a;
+    border: 2px solid #cba6f7;
+    color: #cdd6f4;
+}
+
+#entry:selected #text {
+    color: #cdd6f4;
+}
+
+/* Icons */
+#img {
+    margin-right: 8px;
+    padding: 2px;
+}
