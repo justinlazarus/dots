@@ -37,14 +37,28 @@
   # Zsh >= 5.1 is required.
   [[ $ZSH_VERSION == (5.<1->*|<6->.*) ]] || return
 
-  # Prompt colors.
-  local grey='242'
-  local red='#FF5C57'
-  local yellow='#F3F99D'
-  local blue='#57C7FF'
-  local magenta='#FF6AC1'
-  local cyan='#9AEDFE'
-  local white='#F1F1F0'
+  # Rosé Pine color palette
+  local base='#191724'
+  local surface='#1f1d2e'
+  local overlay='#26233a'
+  local muted='#6e6a86'
+  local subtle='#908caa'
+  local text='#e0def4'
+  local love='#eb6f92'
+  local gold='#f6c177'
+  local rose='#ebbcba'
+  local pine='#31748f'
+  local foam='#9ccfd8'
+  local iris='#c4a7e7'
+  
+  # Legacy color aliases for compatibility
+  local grey=$muted
+  local red=$love
+  local yellow=$gold
+  local blue=$foam
+  local magenta=$iris
+  local cyan=$pine
+  local white=$text
 
   # Left prompt segments.
   typeset -g POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(
@@ -75,10 +89,10 @@
   # in Pure that makes prompt drift down whenever you use the Alt-C binding from fzf or similar.
   typeset -g POWERLEVEL9K_PROMPT_ADD_NEWLINE=false
 
-  # Magenta prompt symbol if the last command succeeded.
-  typeset -g POWERLEVEL9K_PROMPT_CHAR_OK_{VIINS,VICMD,VIVIS}_FOREGROUND=$magenta
-  # Red prompt symbol if the last command failed.
-  typeset -g POWERLEVEL9K_PROMPT_CHAR_ERROR_{VIINS,VICMD,VIVIS}_FOREGROUND=$red
+  # Iris prompt symbol if the last command succeeded.
+  typeset -g POWERLEVEL9K_PROMPT_CHAR_OK_{VIINS,VICMD,VIVIS}_FOREGROUND=$iris
+  # Love (red) prompt symbol if the last command failed.
+  typeset -g POWERLEVEL9K_PROMPT_CHAR_ERROR_{VIINS,VICMD,VIVIS}_FOREGROUND=$love
   # Default prompt symbol.
   typeset -g POWERLEVEL9K_PROMPT_CHAR_{OK,ERROR}_VIINS_CONTENT_EXPANSION='❯'
   # Prompt symbol in command vi mode.
@@ -94,13 +108,13 @@
   typeset -g POWERLEVEL9K_VIRTUALENV_SHOW_PYTHON_VERSION=false
   typeset -g POWERLEVEL9K_VIRTUALENV_{LEFT,RIGHT}_DELIMITER=
 
-  # Blue current directory.
-  typeset -g POWERLEVEL9K_DIR_FOREGROUND=$blue
+  # Foam (cyan-blue) current directory.
+  typeset -g POWERLEVEL9K_DIR_FOREGROUND=$foam
 
-  # Context format when root: user@host. The first part white, the rest grey.
-  typeset -g POWERLEVEL9K_CONTEXT_ROOT_TEMPLATE="%F{$white}%n%f%F{$grey}@%m%f"
-  # Context format when not root: user@host. The whole thing grey.
-  typeset -g POWERLEVEL9K_CONTEXT_TEMPLATE="%F{$grey}%n@%m%f"
+  # Context format when root: user@host. The first part text, the rest muted.
+  typeset -g POWERLEVEL9K_CONTEXT_ROOT_TEMPLATE="%F{$text}%n%f%F{$muted}@%m%f"
+  # Context format when not root: user@host. The whole thing subtle.
+  typeset -g POWERLEVEL9K_CONTEXT_TEMPLATE="%F{$subtle}%n@%m%f"
   # Don't show context unless root or in SSH.
   typeset -g POWERLEVEL9K_CONTEXT_{DEFAULT,SUDO}_CONTENT_EXPANSION=
 
@@ -110,11 +124,11 @@
   typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_PRECISION=0
   # Duration format: 1d 2h 3m 4s.
   typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_FORMAT='d h m s'
-  # Yellow previous command duration.
-  typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_FOREGROUND=$yellow
+  # Gold previous command duration.
+  typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_FOREGROUND=$gold
 
-  # Grey Git prompt. This makes stale prompts indistinguishable from up-to-date ones.
-  typeset -g POWERLEVEL9K_VCS_FOREGROUND=$grey
+  # Subtle Git prompt. This makes stale prompts indistinguishable from up-to-date ones.
+  typeset -g POWERLEVEL9K_VCS_FOREGROUND=$subtle
 
   # Disable async loading indicator to make directories that aren't Git repositories
   # indistinguishable from large Git repositories without known state.
@@ -124,8 +138,8 @@
   # asynchronously when Git state changes.
   typeset -g POWERLEVEL9K_VCS_MAX_SYNC_LATENCY_SECONDS=0
 
-  # Cyan ahead/behind arrows.
-  typeset -g POWERLEVEL9K_VCS_{INCOMING,OUTGOING}_CHANGESFORMAT_FOREGROUND=$cyan
+  # Pine ahead/behind arrows.
+  typeset -g POWERLEVEL9K_VCS_{INCOMING,OUTGOING}_CHANGESFORMAT_FOREGROUND=$pine
   # Don't show remote branch, current tag or stashes.
   typeset -g POWERLEVEL9K_VCS_GIT_HOOKS=(vcs-detect-changes git-untracked git-aheadbehind)
   # Don't show the branch icon.
@@ -145,8 +159,8 @@
   # Remove space between '⇣' and '⇡' and all trailing spaces.
   typeset -g POWERLEVEL9K_VCS_CONTENT_EXPANSION='${${${P9K_CONTENT/⇣* :⇡/⇣⇡}// }//:/ }'
 
-  # Grey current time.
-  typeset -g POWERLEVEL9K_TIME_FOREGROUND=$grey
+  # Rose current time.
+  typeset -g POWERLEVEL9K_TIME_FOREGROUND=$rose
   # Format for the current time: 09:51:02. See `man 3 strftime`.
   typeset -g POWERLEVEL9K_TIME_FORMAT='%D{%H:%M:%S}'
   # If set to true, time will update when you hit enter. This way prompts for the past
