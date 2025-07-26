@@ -1,14 +1,30 @@
 return {
 
   {
-    'catppuccin/nvim',
+    'rose-pine/neovim',
     priority = 1000,
+    name = 'rose-pine',
+    config = function()
+      require('rose-pine').setup {
+        variant = 'main',
+        dark_variant = 'main',
+        bold_vert_split = false,
+        dim_nc_background = false,
+        disable_background = false,
+        disable_float_background = false,
+      }
+      vim.api.nvim_command 'colorscheme rose-pine'
+    end,
+  },
+  {
+    'catppuccin/nvim',
+    priority = 999,
     name = 'catppuccin',
     config = function()
       require('catppuccin').setup {
         flavour = 'mocha',
       }
-      vim.api.nvim_command 'colorscheme catppuccin'
+      -- vim.api.nvim_command 'colorscheme catppuccin'
     end,
   },
   {
