@@ -4,3 +4,5 @@ font-family = "Iosevka Term"
 font-size = 16
 macos-titlebar-style = hidden
 copy-on-select = clipboard
+clipboard-paste-protection = false
+keybind = shift+enter=text:\n
