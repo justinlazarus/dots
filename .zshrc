@@ -15,6 +15,31 @@ fi
 bindkey -v
 
 # =========================================
+# History Configuration
+# =========================================
+HISTSIZE=10000
+SAVEHIST=10000
+HSTFILE=~/.zsh_history
+setopt HIST_VERIFY
+setopt SHARE_HISTORY
+setopt APPEND_HISTORY
+setopt INC_APPEND_HISTORY
+setopt HIST_IGNORE_DUPS
+setopt HIST_IGNORE_ALL_DUPS
+setopt HIST_REDUCE_BLANKS
+
+# =========================================
+# Auto Complete Configuration
+# =========================================
+autoload -Uz compinit && compinit
+setopt AUTO_MENU
+setopt COMPLETE_IN_WORD
+setopt ALWAYS_TO_END
+setopt AUTO_CD
+setopt AUTO_PUSHD
+setopt PUSHD_IGNORE_DUPS
+
+# =========================================
 # PATH Configuration
 # =========================================
 # Add Neovim Mason binaries to PATH
@@ -55,7 +80,13 @@ source <(fzf --zsh)
 # Aliases
 # =========================================
 # Enhanced ls with details and formatting
-alias ll='ls -alF'
+alias ls='eza --icons'
+alias l='eza -la --icons'
+alias ll='eza -la --icons'
+alias lt='eza -la --sort=modified --icons'
+alias tree='eza --tree --icons'
 
 # FZF with preview functionality
 alias ff="fzf --style full --preview 'fzf-preview.sh {}'"
+alias ..='cd ..'
+
