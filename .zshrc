@@ -9,9 +9,12 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$HOMEBREW_PREFIX/opt/nvm/nvm.sh" ] && \. "$HOMEBREW_PREFIX/opt/nvm/nvm.sh" # This loads nvm
 [ -s "$HOMEBREW_PREFIX/opt/nvm/etc/bash_completion.d/nvm" ] && \. "$HOMEBREW_PREFIX/opt/nvm/etc/bash_completion.d/nvm" # This loads nvm bash_completion
 export PATH="$HOME/.local/share/nvim/mason/bin:$PATH"
+export PATH="$HOME/.local/bin/$PATH"
+export PATH="$HOME/Library/Python/3.9/bin:$PATH"
 export PATH="/opt/homebrew/bin:$PATH"
 export DOTNET_ConnectionStrings__Database="Data Source=localhost,1433;Database=intl-depot-db;Integrated Security=false;User ID=SA;Password=Intl@depot1;TrustServerCertificate=True;"
 export DOTNET_MessagingOptions__Namespace="amqp://guest:guest@localhost:5672/"
+
 
 source /opt/homebrew/share/powerlevel10k/powerlevel10k.zsh-theme
 
@@ -23,3 +26,5 @@ source <(fzf --zsh)
 
 alias ll='ls -alF'
 alias ff="fzf --style full --preview 'fzf-preview.sh {}'"
+
+export PODMAN_COMPOSE_PROVIDER=podman-compose
