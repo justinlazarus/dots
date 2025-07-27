@@ -1,3 +1,5 @@
 [user]
 	email = justin.lazarus@gmail.com
 	name = Justin Lazarus
+[core]
+	excludesfile = ~/.gitignore_global

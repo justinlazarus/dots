@@ -96,6 +96,36 @@ echo "Installing SbarLua..."
 (git clone https://github.com/FelixKratz/SbarLua.git /tmp/SbarLua && cd /tmp/SbarLua/ && make install && rm -rf /tmp/SbarLua/)
 
 # =========================================
+# Clone Dotfiles Repository
+# =========================================
+echo "📥 Cloning dotfiles repository..."
+
+# Clone the dots repository to home directory
+cd $HOME
+git clone https://github.com/justinlazarus/dots.git
+
+# =========================================
+# Configuration Symlinks
+# =========================================
+echo "🔗 Creating configuration symlinks..."
+
+# Create ~/.config directory if it doesn't exist
+mkdir -p ~/.config
+
+# Symlink all configuration directories and files
+ln -sf ~/dots/nvim ~/.config/nvim
+ln -sf ~/dots/sketchybar ~/.config/sketchybar
+ln -sf ~/dots/ghostty ~/.config/ghostty
+ln -sf ~/dots/borders ~/.config/borders
+ln -sf ~/dots/tmux ~/.config/tmux
+ln -sf ~/dots/aerospace ~/.config/aerospace
+ln -sf ~/dots/.zshrc ~/.zshrc
+ln -sf ~/dots/.gitconfig ~/.gitconfig
+ln -sf ~/dots/.gitignore_global ~/.gitignore_global
+
+echo "✅ Configuration symlinks created"
+
+# =========================================
 # Manual Configuration Reminders
 # =========================================
 echo "📝 Manual configuration needed:"
