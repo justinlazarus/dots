@@ -9,4 +9,4 @@ clipboard-paste-protection = false
 keybind = shift+enter=text:\n
 
 # Transparency
-background-opacity = 0.95
+background-opacity = 0.90

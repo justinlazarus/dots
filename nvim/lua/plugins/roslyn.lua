@@ -1,9 +1,10 @@
 return {
   'seblyng/roslyn.nvim',
   ft = 'cs',
-  ---@module 'roslyn.config'
-  ---@type RoslynNvimConfig
   opts = {
-    -- your configuration comes here; leave empty for default settings
+    exe = vim.fn.stdpath 'data' .. '/mason/bin/roslyn',
+    filewatching = 'auto',
+    broad_search = false,
+    lock_target = false,
   },
 }

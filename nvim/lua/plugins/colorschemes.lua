@@ -7,6 +7,9 @@ return {
     config = function()
       require('rose-pine').setup {
         variant = 'main',
+        styles = {
+          transparency = true,
+        },
         dark_variant = 'main',
         bold_vert_split = false,
         dim_nc_background = false,
@@ -23,6 +26,7 @@ return {
     config = function()
       require('catppuccin').setup {
         flavour = 'mocha',
+        transparent_background = true,
       }
       -- vim.api.nvim_command 'colorscheme catppuccin'
     end,
