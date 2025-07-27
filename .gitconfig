@@ -3,3 +3,10 @@
 	name = Justin Lazarus
 [core]
 	excludesfile = ~/.gitignore_global
+	autocrlf = input
+	commentChar = $
+[pull]
+	rebase = false
+[alias]
+	lol = log --oneline --decorate
+	graph = log --oneline --graph --decorate
