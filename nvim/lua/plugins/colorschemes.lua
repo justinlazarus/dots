@@ -8,7 +8,7 @@ return {
       require('rose-pine').setup {
         variant = 'main',
         styles = {
-          transparency = true,
+          transparency = false,
         },
         dark_variant = 'main',
         bold_vert_split = false,
@@ -16,7 +16,7 @@ return {
         disable_background = false,
         disable_float_background = false,
       }
-      vim.api.nvim_command 'colorscheme rose-pine'
+      --vim.api.nvim_command 'colorscheme rose-pine'
     end,
   },
   {
@@ -41,7 +41,7 @@ return {
           comments = { italic = false },
         },
       }
-      --vim.cmd.colorscheme 'tokyonight-night'
+      vim.cmd.colorscheme 'tokyonight-night'
     end,
   },
 }
