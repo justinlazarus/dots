@@ -1,0 +1,99 @@
+# Usage: limactl start lima-default-clone.yaml
+
+# VM resources (matching your current setup)
+cpus: 4
+memory: "4GiB"
+disk: "100GiB"
+
+# Ubuntu ARM image (more stable for Lima)
+images:
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+
+# SSH configuration
+ssh:
+  localPort: 60022
+  loadDotSSHPubKeys: true
+  forwardAgent: true
+
+# Mount points disabled - no local directory access
+mounts: []
+
+# Package installation script to replicate your current environment
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    apt-get update
+    apt-get install -y \
+      build-essential \
+      git \
+      curl \
+      wget \
+      vim \
+      nano \
+      htop \
+      tree \
+      unzip \
+      zip \
+      openssh-server \
+      sudo \
+      ca-certificates \
+      python3 \
+      python3-pip \
+      nodejs \
+      npm \
+      tmux \
+      neovim
+    
+    # Enable SSH service
+    systemctl enable ssh
+    systemctl start ssh
+    
+    # Update CA certificates
+    update-ca-certificates
+
+- mode: user
+  script: |
+    #!/bin/bash
+    # Clone dotfiles repo
+    if [ ! -d "$HOME/dots" ]; then
+      git -c http.sslverify=false clone https://github.com/justinlazarus/dots.git ~/dots
+    fi
+    
+    # Create symlinks for dotfiles
+    ln -sf ~/dots/.zshrc ~/.zshrc
+    ln -sf ~/dots/.gitconfig ~/.gitconfig
+    ln -sf ~/dots/.gitignore_global ~/.gitignore_global
+    
+    # Create config directories and symlinks
+    mkdir -p ~/.config
+    ln -sf ~/dots/nvim ~/.config/nvim
+    ln -sf ~/dots/tmux ~/.config/tmux
+    ln -sf ~/dots/ghostty ~/.config/ghostty
+
+# Port forwarding (common development ports)
+portForwards:
+- guestPort: 3000
+  hostPort: 3000
+- guestPort: 8080
+  hostPort: 8080
+- guestPort: 8000
+  hostPort: 8000
+
+# Network settings - use default networking
+# networks:
+# - lima: shared
+
+# Additional settings
+firmware:
+  legacyBIOS: false
+
+# Rosetta for x86_64 emulation (if needed on Apple Silicon)
+rosetta:
+  enabled: false
+  binfmt: false
+
+# Video acceleration
+video:
+  display: "none"

@@ -1,14 +1,4 @@
 # =========================================
-# Powerlevel10k Instant Prompt
-# =========================================
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
-# Initialization code that may require console input (password prompts, [y/n]
-# confirmations, etc.) must go above this block; everything else may go below.
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
-
-# =========================================
 # Shell Configuration
 # =========================================
 # Enable vim mode for command line editing
@@ -19,7 +9,7 @@ bindkey -v
 # =========================================
 HISTSIZE=10000
 SAVEHIST=10000
-HSTFILE=~/.zsh_history
+HISTFILE=~/.zsh_history
 setopt HIST_VERIFY
 setopt SHARE_HISTORY
 setopt APPEND_HISTORY
@@ -48,43 +38,66 @@ export PATH="$HOME/.local/share/nvim/mason/bin:$PATH"
 # Add Homebrew to PATH
 export PATH="/opt/homebrew/bin:$PATH"
 
+# Set Homebrew prefix for Apple Silicon Macs
+export HOMEBREW_PREFIX="/opt/homebrew"
+
+export EDITOR=neovim
+
 # =========================================
 # Node.js (NVM) Configuration
 # =========================================
 export NVM_DIR="$HOME/.nvm"
-[ -s "$HOMEBREW_PREFIX/opt/nvm/nvm.sh" ] && \. "$HOMEBREW_PREFIX/opt/nvm/nvm.sh" # This loads nvm
-[ -s "$HOMEBREW_PREFIX/opt/nvm/etc/bash_completion.d/nvm" ] && \. "$HOMEBREW_PREFIX/opt/nvm/etc/bash_completion.d/nvm" # This loads nvm bash_completion
+# Lazy load nvm for faster shell startup
+nvm() {
+    unset -f nvm
+    [ -s "$HOMEBREW_PREFIX/opt/nvm/nvm.sh" ] && \. "$HOMEBREW_PREFIX/opt/nvm/nvm.sh"
+    [ -s "$HOMEBREW_PREFIX/opt/nvm/etc/bash_completion.d/nvm" ] && \. "$HOMEBREW_PREFIX/opt/nvm/etc/bash_completion.d/nvm"
+    nvm "$@"
+}
 
 # =========================================
 # .NET Development Environment Variables
 # =========================================
-export DOTNET_ConnectionStrings__Database="Data Source=localhost,1433;Database=intl-depot-db;Integrated Security=false;User ID=SA;Password=Intl@depot1;TrustServerCertificate=True;"
-export DOTNET_MessagingOptions__Namespace="amqp://guest:guest@localhost:5672/"
+# Database connection (can be overridden by environment-specific config)
+export DOTNET_ConnectionStrings__Database="${DOTNET_ConnectionStrings__Database:-Data Source=localhost,1433;Database=intl-depot-db;Integrated Security=false;User ID=SA;Password=Intl@depot1;TrustServerCertificate=True;}"
+export DOTNET_MessagingOptions__Namespace="${DOTNET_MessagingOptions__Namespace:-amqp://guest:guest@localhost:5672/}"
 
 # =========================================
-# Theme Configuration
+# Angular Development Environment Variables
 # =========================================
-# Load Powerlevel10k theme
-source /opt/homebrew/share/powerlevel10k/powerlevel10k.zsh-theme
-
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+export CI=true
+export KARMA_LOG_LEVEL="ERROR"
+export NG_CLI_ANALYTICS=false
 
 # =========================================
 # Tool Integrations
 # =========================================
-# Set up fzf key bindings and fuzzy completion
-source <(fzf --zsh)
+# Set up fzf key bindings and fuzzy completion (check if fzf exists first)
+if command -v fzf >/dev/null 2>&1; then
+    source <(fzf --zsh)
+fi
+
+# =========================================
+# Certs
+# =========================================
+export NODE_EXTRA_CA_CERTS=/Users/jlazarus/costco-certs.pem
+export SSL_CERT_FILE=/Users/jlazarus/costco-certs.pem
 
 # =========================================
 # Aliases
 # =========================================
-# Enhanced ls with details and formatting
-alias ls='eza --icons'
-alias l='eza -la --icons'
-alias ll='eza -la --icons'
-alias lt='eza -la --sort=modified --icons'
-alias tree='eza --tree --icons'
+# Enhanced ls with details and formatting (fallback to ls if eza not available)
+if command -v eza >/dev/null 2>&1; then
+    alias ls='eza --icons'
+    alias l='eza -la --icons'
+    alias ll='eza -la --icons'
+    alias lt='eza -la --sort=modified --icons'
+    alias tree='eza --tree --icons'
+else
+    alias l='ls -la'
+    alias ll='ls -la'
+    alias lt='ls -lat'
+fi
 
 # FZF with preview functionality
 alias ff="fzf --style full --preview 'fzf-preview.sh {}'"
@@ -92,3 +105,19 @@ alias ..='cd ..'
 
 alias code="code-insiders"
 alias stoptanium='sudo launchctl unload /Library/LaunchDaemons/com.tanium.taniumclient.plist'
+
+# =========================================
+# Prompt Configuration
+# =========================================
+# Set prompt to [user :: cwd] with username in gitmux green (#9ece6a)
+PROMPT='[ %F{#9ece6a}%n%f :: %~ ] '
+
+# opencode
+export PATH=/Users/jlazarus/.opencode/bin:$PATH
+
+# bun completions
+[ -s "/Users/jlazarus/.bun/_bun" ] && source "/Users/jlazarus/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"

@@ -1,76 +1,288 @@
 {
-    "explorer.confirmDelete": false,
-    "explorer.confirmDragAndDrop": false,
+  "[markdown]": {
+    "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
+  },
+  "[csharp]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "csharpier.csharpier-vscode"
+  },
+  "[xml]": {
+    "editor.defaultFormatter": "csharpier.csharpier-vscode"
+  },
+  "[javascript]": {
+    "editor.formatOnSave": false,
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.formatOnSave": false,
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "dotnet.backgroundAnalysis.analyzerDiagnosticsScope": "fullSolution",
+  "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": false,
+  "editor.fontFamily": "0xProto Nerd Font Mono",
+  "editor.fontLigatures": true,
+  "editor.fontSize": 14,
+  "editor.formatOnSave": true,
+  "editor.formatOnType": true,
+  "editor.minimap.enabled": false,
+  "editor.rulers": [
+    110
+  ],
+  "editor.wordWrapColumn": 110,
 
-    "editor.tabSize": 4,
-    "editor.inlayHints.enabled": "off",
-    "editor.fontFamily": "Iosevka SS18",
-    "editor.fontLigatures": true,
-    "editor.rulers": [ 100, ],
-    "editor.lineNumbers": "relative",
-    "editor.minimap.enabled": false,
 
-    "dotnet.codeLens.enableReferencesCodeLens": false,
-    "http.proxyStrictSSL": false,
-
-    "terminal.integrated.enableMultiLinePasteWarning": false,
-    "terminal.integrated.fontFamily": "Fira Code",
-
-    "window.zoomLevel": 1,
-
-    "workbench.colorTheme": "Monokai",
-    "workbench.iconTheme": "vs-minimal",
-
-    // GIT
-    "git.confirmSync": false,
-    "git.enableSmartCommit": true,
-    "git.openRepositoryInParentFolders": "never",
-    "git.autofetch": true,
-
-    // VIM STUFF
-    "vim.leader": " ",
-    "vim.textwidth": 80,
-    "vim.smartRelativeLine": true,
-    "vim.normalModeKeyBindings": [
-
-        // Fuzzy Find
+  "errorLens.enabledDiagnosticLevels": ["error", "warning", "info", "hint"],
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "mssql.enableQueryHistoryCapture": false,
+  "problems.decorations.enabled": true,
+  "terminal.integrated.fontFamily": "Iosevka Nerd Font Mono",
+  "terminal.integrated.fontSize": 16,
+  "typescript.preferences.includePackageJsonAutoImports": "on",
+  "typescript.suggest.enabled": true,
+  "typescript.tsserver.experimental.enableProjectDiagnostics": true,
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "typescript.validate.enable": true,
+  "workbench.colorTheme": "Tokyo Night Storm",
+  "workbench.iconTheme": "catppuccin-latte",
+  "vim.leader": "<space>",
+  "vim.textwidth": 110,
+  "vim.useSystemClipboard": true,
+  "vim.normalModeKeyBindingsNonRecursive": [
+    {
+      "before": ["K"],
+      "commands": ["editor.action.showHover"]
+    },
+    {
+      "before": ["g", "r"],
+      "commands": ["editor.action.goToReferences"]
+    },
+    {
+      "before": ["g", "i"],
+      "commands": ["editor.action.goToImplementation"]
+    },
+    {
+      "before": ["<leader>", "="],
+      "commands": ["editor.action.fontZoomIn"]
+    },
+    {
+      "before": ["<leader>", "-"],
+      "commands": ["editor.action.fontZoomOut"]
+    }
+  ],
+  "mssql.connectionGroups": [
+    {
+      "name": "ROOT",
+      "id": "9B3A16AF-4876-4F7F-AE30-9C82159BE6BF"
+    }
+  ],
+  "mssql.connections": [
+    {
+      "authenticationType": "SqlLogin",
+      "connectTimeout": 30,
+      "applicationName": "vscode-mssql",
+      "applicationIntent": "ReadWrite",
+      "server": "localhost,1433",
+      "user": "sa",
+      "password": "",
+      "columnEncryptionSetting": "Disabled",
+      "trustServerCertificate": true,
+      "groupId": "9B3A16AF-4876-4F7F-AE30-9C82159BE6BF",
+      "id": "7C52A669-BABD-4C81-A460-55DCB6934B3F",
+      "database": "depot-db",
+      "commandTimeout": 30,
+      "encrypt": "Mandatory",
+      "profileSource": 0,
+      "savePassword": true,
+      "containerName": "db_performance_test_mssql",
+      "profileName": "depot-db"
+    },
+    {
+      "authenticationType": "SqlLogin",
+      "connectTimeout": 30,
+      "applicationName": "vscode-mssql",
+      "applicationIntent": "ReadWrite",
+      "profileName": "old-db",
+      "server": "localhost,1433",
+      "user": "sa",
+      "password": "",
+      "savePassword": true,
+      "database": "intl-depot-db",
+      "trustServerCertificate": true,
+      "groupId": "9B3A16AF-4876-4F7F-AE30-9C82159BE6BF",
+      "id": "0727AAFB-0470-4D4D-A666-08685C0F1DDA",
+      "commandTimeout": 30,
+      "encrypt": "Mandatory",
+      "containerName": "intl-depot-db"
+    }
+  ],
+  "explorer.confirmDragAndDrop": false,
+  "code-for-ibmi.connections": [
+    {
+      "name": "dev400",
+      "host": "dev400.corp.costco.com",
+      "port": 22,
+      "username": "jlazaru"
+    }
+  ],
+  "code-for-ibmi.connectionSettings": [
+    {
+      "name": "dev400",
+      "host": "",
+      "objectFilters": [
         {
-            "before": ["<leader>", "s", "w"],
-            "commands": ["workbench.action.findInFiles"]
+          "name": "INDEVEXC",
+          "filterType": "simple",
+          "library": "INDEVEXC",
+          "object": "QRPGLESRC",
+          "types": [
+            "*SRCPF"
+          ],
+          "member": "*",
+          "memberType": "*",
+          "protected": false,
+          "buttons": "SAVE"
         },
         {
-            "before": ["<leader>", "s", "f"],
-            "commands": ["workbench.action.quickOpen"]
-        },
-
-        // workspace manipulation
-        {
-            "before": ["<leader>", "s", "c"],
-            "commands": ["workbench.action.showCommands"]
-        },
-        {
-            "before": ["<leader>", "t", "p"],
-            "commands": ["workbench.action.togglePanel"]
+          "name": "Filter 2",
+          "filterType": "simple",
+          "library": "QGPL",
+          "object": "INR504",
+          "types": [
+            "*SRCPF"
+          ],
+          "member": "*",
+          "memberType": "*",
+          "protected": false
         },
         {
-            "before": ["K"],
-            "commands": ["editor.action.showHover"]
-        },
-        {
-            "before": ["<leader>", "f", "e"],
-            "commands": ["workbench.action.focusActiveEditorGroup"]
-        },
-        {
-            "before": ["<leader>", "f", "t"],
-            "commands": ["workbench.action.terminal.focus"]
-        },
-        {
-            "before": ["<leader>", "p", "d"],
-            "commands": ["editor.action.peekDefinition"]
-        },
-        {
-            "before": ["<leader>", "g", "d"],
-            "commands": ["editor.action.goToTypeDefinition"]
-        },
-    ],
+          "name": "Filter 3",
+          "filterType": "simple",
+          "library": "QGPL",
+          "object": "*",
+          "types": [
+            "*SRCPF"
+          ],
+          "member": "INR504",
+          "memberType": "*",
+          "protected": false
+        }
+      ],
+      "libraryList": [
+        "QTEMP",
+        "CODEVTMP",
+        "JLAZARU",
+        "P78ADTEXC",
+        "P78QATEXC",
+        "P78UATEXC",
+        "P78ADTDB",
+        "P78ADTDTA",
+        "P78ADTDT1",
+        "P78ADTDB1",
+        "COTSTDB0",
+        "CODEVDB0",
+        "INDEVEXC",
+        "ACDEVEXC",
+        "MBDEVEXC",
+        "EIDEVEXC",
+        "OADEVEXC",
+        "OADEVSRC",
+        "INDEVOC",
+        "ACDEVOC",
+        "MBDEVOC",
+        "EIDEVOC",
+        "DEVEDIOC",
+        "PRDCOMMOC",
+        "INDEVDTA",
+        "INDEVDB",
+        "ACDEVDTA",
+        "MBDEVDTA",
+        "DEVCOMM",
+        "DEVEDI",
+        "DSPFILE",
+        "TSTGPL",
+        "PRDGPL",
+        "SPPRDGPL",
+        "QGPL",
+        "QIDU",
+        "SEQUEL",
+        "TURNQGPL",
+        "RBTSYSLIB",
+        "TOOLS",
+        "DEVTOOLS",
+        "DEPTSTDTA"
+      ],
+      "autoClearTempData": false,
+      "customVariables": [],
+      "connectionProfiles": [],
+      "commandProfiles": [],
+      "ifsShortcuts": [
+        "/home/jlazaru"
+      ],
+      "autoSortIFSShortcuts": false,
+      "homeDirectory": "/home/jlazaru",
+      "tempLibrary": "ILEDITOR",
+      "tempDir": "/tmp",
+      "currentLibrary": "JLAZARU",
+      "sourceFileCCSID": "*FILE",
+      "autoConvertIFSccsid": false,
+      "hideCompileErrors": [],
+      "enableSourceDates": false,
+      "sourceDateGutter": false,
+      "encodingFor5250": "default",
+      "terminalFor5250": "default",
+      "setDeviceNameFor5250": false,
+      "connectringStringFor5250": "+uninhibited localhost",
+      "autoSaveBeforeAction": false,
+      "showDescInLibList": false,
+      "debugPort": "8005",
+      "debugSepPort": "8008",
+      "debugUpdateProductionFiles": false,
+      "debugEnableDebugTracing": false,
+      "readOnlyMode": false,
+      "quickConnect": true,
+      "defaultDeploymentMethod": "",
+      "protectedPaths": [],
+      "showHiddenFiles": true,
+      "lastDownloadLocation": "/Users/jlazarus"
+    }
+  ],
+  "remote.autoForwardPortsSource": "hybrid",
+  "workbench.secondarySideBar.defaultVisibility": "hidden",
+  "explorer.confirmDelete": false,
+  "workbench.activityBar.location": "top",
+  "terminal.integrated.profiles.linux": {
+    "bash": {
+      "path": "bash",
+      "icon": "terminal-bash"
+    },
+    "zsh": {
+      "path": "zsh"
+    },
+    "fish": {
+      "path": "fish"
+    },
+    "tmux": {
+      "path": "tmux",
+      "icon": "terminal-tmux"
+    },
+    "pwsh": {
+      "path": "pwsh",
+      "icon": "terminal-powershell"
+    },
+    "zsh (2)": {
+      "path": "/usr/bin/zsh"
+    }
+  },
+  "github.copilot.chat.codeGeneration.useInstructionFiles": true,
+  "terminal.integrated.defaultProfile.linux": "zsh (2)",
+  "mssql.openQueryResultsInTabByDefaultDoNotShowPrompt": true,
+  "dev.containers.dockerSocketPath": "/Users/jlazarus/.lima/docker/sock/docker.sock",
+  "workbench.startupEditor": "none",
+  "workbench.colorCustomizations": {"editorRuler.foreground": "#FF9E64"},
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/*/**": true
+  },
 }

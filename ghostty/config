@@ -1,7 +1,33 @@
-theme = rose-pine
-font-family = "Iosevka Term"
+font-family = "0x Proto Nerd Font"
 font-size = 16
-font-feature = +liga,+calt,+ss01,+ss02,+ss03,+ss04,+ss05,+ss06,+ss07,+ss08,+ss09
 copy-on-select = clipboard
 clipboard-paste-protection = false
-keybind = shift+enter=text:\n
+
+# Tokyo Night Storm theme
+background = #24283b
+foreground = #c0caf5
+
+# Selection colors
+selection-background = #364a82
+selection-foreground = #c0caf5
+
+# Color palette
+palette = 0=#1d202f
+palette = 1=#f7768e
+palette = 2=#9ece6a
+palette = 3=#e0af68
+palette = 4=#7aa2f7
+palette = 5=#bb9af7
+palette = 6=#7dcfff
+palette = 7=#a9b1d6
+palette = 8=#414868
+palette = 9=#f7768e
+palette = 10=#9ece6a
+palette = 11=#e0af68
+palette = 12=#7aa2f7
+palette = 13=#bb9af7
+palette = 14=#7dcfff
+palette = 15=#c0caf5
+
+# Hide title bar for macOS
+macos-titlebar-style = hidden

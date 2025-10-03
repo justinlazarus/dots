@@ -1,6 +1,6 @@
 [user]
 	email = jlazarus@costco.com
-	name = Justin Lazarus
+	name = Justin Lazarus [jlazarus]
 [core]
 	excludesfile = ~/.gitignore_global
 	autocrlf = input
@@ -10,3 +10,8 @@
 [alias]
 	lol = log --oneline --decorate
 	graph = log --oneline --graph --decorate
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
