@@ -1,0 +1,128 @@
+let mapleader = " "
+
+set scrolloff=5
+set incsearch
+set ignorecase
+set hlsearch
+set highlightedyank
+set which-key
+set notimeout
+set clipboard+=unnamed
+"let g:WhichKey_ShowVimActions = "true"
+let g:WhichKey_FontSize = 18
+let g:WhichKey_CommandColor = "#41ead4"
+let g:WhichKey_PrefixColor = "#f335b2"
+let g:WhichKeyDesc_leader = "<leader> Leader key"
+
+nnoremap <leader>si :action IdeaVim.ReloadVimRc.reload<cr>
+let g:WhichKeyDesc_ReloadVimrc = "<leader>si Reload vimrc"
+nnoremap <Esc> :noh<CR><Esc>
+
+map Q gq
+
+Plug 'machakann/vim-highlightedyank'
+Plug 'tpope/vim-commentary'
+
+nmap K <Action>(QuickImplementations)
+
+" NAVIGATION
+nmap gd <Action>(GotoDeclaration)
+let g:WhichKeyDesc_GotoDeclaration = "gd Goto declaration"
+nmap gI <Action>(ReSharperGotoImplementation)
+let g:WhichKeyDesc_GotoImplementation = "gI Goto implementation"
+nmap gy <Action>(GotoTypeDeclaration)
+let g:WhichKeyDesc_GotoTypeDeclaration = "gy Goto type declaration"
+nmap gr <Action>(ShowUsages)
+let g:WhichKeyDesc_ShowUsages = "gr Goto references"
+nmap gt <Action>(GotoTest)
+let g:WhichKeyDesc_GotoTest = "gt Goto tests"
+
+" UNIT TEST ----------------------------------------------------------------------------------------
+let g:WhichKeyDesc_Test = "<leader>t unit test"
+
+map <leader>tr <Action>(RiderUnitTestRunContextAction)
+let g:WhichKeyDesc_RunUnitTest = "<leader>tr Unit [test] [R]un"
+map <leader>td <Action>(RiderUnitTestDebugContextAction)
+let g:WhichKeyDesc_DebugUnitTest = "<leader>tr Unit [test] [D]ebug"
+
+" ACTIONS ------------------------------------------------------------------------------------------
+let g:WhichKeyDesc_Actions = "<leader>a actions"
+
+map <leader>ar <Action>(com.intellij.csharpier.ReformatWithCSharpierAction)
+let g:WhichKeyDesc_Csharpier = "<leader>ar [a]ction [c]sharpier"
+map <leader>al <Action>(ShowIntentionActions)
+let g:WhichKeyDesc_ShowIntentionActions = "<leader>al [a]ction [l]ist"
+map <leader>am <Action>(ImplementMethods)
+let g:WhichKeyDesc_ImplementMethods = "<leader>am [a]ction implement [m]ethods"
+
+" FIND ---------------------------------------------------------------------------------------------
+let g:WhichKeyDesc_Find = "<leader>f find"
+
+map <leader>fa <Action>(SearchEverywhere)
+let g:WhichKeyDesc_SearchEverywhere = "<leader>fa find [a]ll"
+map <leader>fc <Action>(GotoClass)
+let g:WhichKeyDesc_GotoClass = "<leader>fc [f]ind [c]lass"
+map <leader>ff <Action>(GotoFile)
+let g:WhichKeyDesc_GotoFile = "<leader>ff [f]ind [f]ile"
+map <leader>fs <Action>(GotoSymbol)
+let g:WhichKeyDesc_GotoSymbol = "<leader>fs [f]ind [s]ymbol"
+map <leader>fa <Action>(GotoAction)
+let g:WhichKeyDesc_GotoAction = "<leader>fa [f]ind [a]ction"
+map <leader>fp <Action>(ManageRecentProjects)
+let g:WhichKeyDesc_ManageRecentProjects = "<leader>fp [f]ind recent [p]rojets"
+map <leader>fi <Action>(FindInPath)
+let g:WhichKeyDesc_FindInPath = "<leader>fi [f]ind [i]n files"
+map <leader>fn <Action>(RecentFiles)
+let g:WhichKeyDesc_RecentFiles = "<leader>fn [f]ind in rece[n]t files"
+map <leader>fl <Action>(RecentLocations)
+let g:WhichKeyDesc_RecentLocations = "<leader>fl [f]ind in recent [l]ocations"
+
+" VIEW --------------------------------------------------------------------------------------------
+let g:WhichKeyDesc_View = "<leader>v view"
+
+map <leader>vf <Action>(ActivateProjectToolWindow)
+let g:WhichKeyDesc_ActivateProjectToolWindow = "<leader>vf [v]iew [p]roject"
+map <leader>vb <Action>(ActivateProblemsViewToolWindow)
+let g:WhichKeyDesc_ActivateProblemsViewToolWindow = "<leader>vb [v]iew pro[b]lem"
+map <leader>vs <Action>(ActivateStructureToolWindow)
+let g:WhichKeyDesc_ActivateStructureToolWindow = "<leader>vs [v]iew [s]tructure"
+map <leader>vt <Action>(ActivateTerminalToolWindow)
+let g:WhichKeyDesc_ActivateTerminalToolWindow = "<leader>vt [v]iew [t]erminal"
+map <leader>vv <Action>(ActivateServicesToolWindow)
+let g:WhichKeyDesc_ActivateServicesToolWindow = "<leader>vv [v]iew ser[v]ices"
+map <leader>vd <Action>(ActivateDebugToolWindow)
+let g:WhichKeyDesc_ActivateDebugToolWindow = "<leader>vd [v]iew [d]ebug"
+map <leader>vg <Action>(ActivateVersionControlToolWindow)
+let g:WhichKeyDesc_ActivateVersionControlToolWindow = "<leader>vg [v]iew [g]it"
+map <leader>vo <Action>(ActivateTODOToolWindow)
+let g:WhichKeyDesc_ActivateTODOToolWindow = "<leader>vo [v]iew t[o]do"
+map <leader>vc <Action>(HideActiveWindow)
+let g:WhichKeyDesc_HideActiveWindow = "<leader>vc [v]iew [c]lose"
+map <leader>vk <Action>(QuickImplementations)
+let g:WhichKeyDesc_QuickImplementations = "<leader>vk view definition"
+map <leader>vi <Action>(InspectThis)
+let g:WhichKeyDesc_InspectThis = "<leader>vi [v]iew [i]nspector"
+
+" GIT ---------------------------------------------------------------------------------------------
+let g:WhichKeyDesc_Git = "<leader>g git"
+
+map <leader>gl <Action>(ActivateVersionControlToolWindow)
+let g:WhichKeyDesc_VersionControl = "<leader>gl [g]it [l]og""
+map <leader>gb <Action>(Git.Branches)
+let g:WhichKeyDesc_GitBranches = "<leader>gb [g]it [b]ranches"
+map <leader>gp <Action>(Git.Pull)
+let g:WhichKeyDesc_GitPull = "<leader>gp [g]it [p]ull"
+map <leader>gh <Action>(Vcs.ShowTabbedFileHistory)
+let g:WhichKeyDesc_GitHistory = "<leader>gh [g]it [h]istory"
+map <leader>ga <Action>(Annotate)
+let g:WhichKeyDesc_Annotate = "<leader>ga [git bl[a]me"
+map <leader>gf <Action>(Git.Fetch)
+let g:WhichKeyDesc_GitFetch = "<leader>gf [g]it [f]etch"
+
+" OTHER ---------------------------------------------------------------------------------------------
+let g:WhichKeyDesc_Git = "<leader>g git"
+map <leader>oj o<Space><Esc>
+let g:WhichKeyDesc_NormalNewlineBelow = "<leader>oj Normal newline below"
+map <leader>ok o<Space><Esc>
+let g:WhichKeyDesc_NormalNewlineAbove = "<leader>ok Normal newline above"
+

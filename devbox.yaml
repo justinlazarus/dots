@@ -44,7 +44,10 @@ provision:
       nodejs \
       npm \
       tmux \
-      neovim
+      neovim \
+      jq \
+      terraform \
+      zsh
     
     # Enable SSH service
     systemctl enable ssh
@@ -56,6 +59,9 @@ provision:
 - mode: user
   script: |
     #!/bin/bash
+    # Set zsh as default shell
+    chsh -s $(which zsh)
+    
     # Clone dotfiles repo
     if [ ! -d "$HOME/dots" ]; then
       git -c http.sslverify=false clone https://github.com/justinlazarus/dots.git ~/dots
