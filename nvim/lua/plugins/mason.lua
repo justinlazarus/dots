@@ -11,11 +11,12 @@ return {
       },
     }
 
-    require('mason-lspconfig').setup {
-      ensure_installed = {
-        'lua_ls',
-        -- Roslyn will be installed separately
-      },
-    }
+      require('mason-lspconfig').setup {
+        ensure_installed = {
+          'lua_ls',
+          'roslyn',
+        },
+      }
+
   end,
 }

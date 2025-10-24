@@ -1,7 +1,6 @@
 vim.lsp.enable {
   'lua_ls',
   'ts-ls',
-  'roslyn',
 }
 
 vim.diagnostic.config {
