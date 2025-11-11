@@ -5,6 +5,7 @@
 	excludesfile = ~/.gitignore_global
 	autocrlf = input
 	commentChar = $
+	editor = nvim
 [pull]
 	rebase = false
 [alias]

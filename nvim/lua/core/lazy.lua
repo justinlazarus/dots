@@ -12,7 +12,7 @@ local rtp = vim.opt.rtp
 rtp:prepend(lazypath)
 
 require('lazy').setup({ import = 'plugins' }, {
-  root = lazyppath,
+  root = lazypath,
   defaults = {
     -- Set this to `true` to have all your plugins lazy-loaded by default.
     -- Only do this if you know what you are doing, as it can lead to unexpected behavior.
