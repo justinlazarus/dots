@@ -6,8 +6,7 @@ vim.pack.add {
   'https://github.com/L3MON4D3/LuaSnip',
   'https://github.com/folke/lazydev.nvim',
   'https://github.com/saghen/blink.cmp',
-  -- Roslyn loaded separately below after config setup
-  -- 'https://github.com/seblyng/roslyn.nvim',
+  -- roslyn.nvim loaded manually below (see roslyn section)
   'https://github.com/catppuccin/nvim',
   'https://github.com/stevearc/conform.nvim',
   'https://github.com/lewis6991/gitsigns.nvim',

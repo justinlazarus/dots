@@ -1,13 +1,8 @@
 -- Suppress deprecation warnings from Neovim dev builds
 vim.deprecate = function() end
 
--- Disable all auto-starting for now, manually start via autocmd
--- vim.lsp.enable {
---   'lua_ls',
---   'ts_ls',
--- }
-
--- Manually start LSP servers on FileType to avoid conflicts with roslyn.nvim
+-- Manually start LSP servers on FileType
+-- (Not using vim.lsp.enable to avoid conflicts with roslyn.nvim's custom setup)
 vim.api.nvim_create_autocmd('FileType', {
   pattern = 'lua',
   callback = function(args)
@@ -33,25 +28,8 @@ vim.api.nvim_create_autocmd('FileType', {
 -- When an LSP attaches, set buffer-local keymaps for code actions
 vim.api.nvim_create_autocmd('LspAttach', {
   callback = function(args)
-    local bufnr = args.buf
-    local opts = { buffer = bufnr }
-    vim.keymap.set('n', '<leader>ca', function()
-      local f = (vim.lsp and vim.lsp.buf and vim.lsp.buf.code_action)
-      if type(f) == 'function' then
-        f()
-      else
-        vim.notify('LSP code_action not available', vim.log.levels.WARN)
-      end
-    end, vim.tbl_extend('force', { desc = 'Code Action' }, opts))
-
-    vim.keymap.set('v', '<leader>ca', function()
-      local f = (vim.lsp and vim.lsp.buf and vim.lsp.buf.range_code_action) or (vim.lsp and vim.lsp.buf and vim.lsp.buf.code_action)
-      if type(f) == 'function' then
-        f()
-      else
-        vim.notify('LSP range/code_action not available', vim.log.levels.WARN)
-      end
-    end, vim.tbl_extend('force', { desc = 'Range Code Action' }, opts))
+    vim.keymap.set('n', '<leader>ca', vim.lsp.buf.code_action, { buffer = args.buf, desc = 'Code Action' })
+    vim.keymap.set('v', '<leader>ca', vim.lsp.buf.code_action, { buffer = args.buf, desc = 'Code Action' })
   end,
 })
 

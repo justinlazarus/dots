@@ -67,7 +67,10 @@ local function nx_run_target(target)
   -- Ensure we're in the new window/buffer before starting the terminal job
   vim.api.nvim_set_current_win(new_win)
   local term_buf = vim.api.nvim_get_current_buf()
-  vim.fn.termopen(nx_args, { cwd = workspace_root })
+
+  -- Use shell to ensure proper PATH is loaded
+  local shell_cmd = table.concat(nx_args, ' ')
+  vim.fn.termopen(vim.o.shell .. ' -c ' .. vim.fn.shellescape(shell_cmd), { cwd = workspace_root })
   pcall(vim.cmd, 'startinsert')
 end
 
