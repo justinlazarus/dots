@@ -1,10 +1,6 @@
--- Roslyn restore handler moved to plugin-specific on_attach in
--- `lua/plugins/roslyn.lua` to avoid duplicate notifications when the
--- roslyn client registers its own handler.
-
 vim.lsp.enable {
   'lua_ls',
-  'ts-ls',
+  'ts_ls',
 }
 
 -- When an LSP attaches, set buffer-local keymaps for code actions

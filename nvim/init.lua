@@ -1,5 +1,6 @@
+require 'config.plugin'
 require 'config.options'
 require 'config.keymaps'
 require 'config.autocmds'
-require 'core.lazy'
-require 'core.lsp'
+require 'config.dotnet'
+require 'config.lsp'
