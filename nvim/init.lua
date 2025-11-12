@@ -1,5 +1,5 @@
-require 'config.plugin'
 require 'config.options'
+require 'config.plugin'
 require 'config.keymaps'
 require 'config.autocmds'
 require 'config.dotnet'

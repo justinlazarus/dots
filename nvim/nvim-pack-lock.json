@@ -5,7 +5,7 @@
       "src": "https://github.com/L3MON4D3/LuaSnip"
     },
     "blink.cmp": {
-      "rev": "7d79733a",
+      "rev": "327fff9",
       "src": "https://github.com/saghen/blink.cmp"
     },
     "conform.nvim": {
@@ -19,10 +19,6 @@
     "lazydev.nvim": {
       "rev": "5231c62",
       "src": "https://github.com/folke/lazydev.nvim"
-    },
-    "mason-lspconfig.nvim": {
-      "rev": "b1d9a91",
-      "src": "https://github.com/williamboman/mason-lspconfig.nvim"
     },
     "mason.nvim": {
       "rev": "ad7146aa",

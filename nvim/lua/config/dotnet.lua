@@ -2,11 +2,6 @@
 
 local M = {}
 
--- No-op used by which-key placeholders (actual mappings are buffer-local functions)
-function M._noop()
-  -- intentionally empty
-end
-
 -- Run nx target for the project corresponding to the current buffer
 local function nx_run_target(target)
   if vim.fn.executable('nx') ~= 1 and vim.fn.executable('npx') ~= 1 then
@@ -125,18 +120,6 @@ local function set_nx_bufmaps(bufnr)
   vim.keymap.set('n', '<leader>dr', function()
     dotnet_restore_for_buf(bufnr)
   end, vim.tbl_extend('force', { desc = 'dotnet: restore' }, opts))
-
-  local wk_ok, which_key = pcall(require, 'which-key')
-  if wk_ok and which_key and which_key.register then
-    which_key.register({
-      d = {
-        name = 'dotnet',
-        b = { '<cmd>lua require("config.dotnet")._noop()<CR>', 'build (nx)' },
-        t = { '<cmd>lua require("config.dotnet")._noop()<CR>', 'test (nx)' },
-        r = { '<cmd>lua require("config.dotnet")._noop()<CR>', 'restore (dotnet)' },
-      },
-    }, { prefix = '<leader>', buffer = bufnr })
-  end
 end
 
 function M.setup(opts)
