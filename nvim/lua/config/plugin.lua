@@ -299,6 +299,9 @@ require('oil').setup {
 -------------------------------------------------------------------------------------------------------- blink
 
 require('blink.cmp').setup {
+  enabled = function()
+    return vim.bo.filetype ~= "markdown"
+  end,
   fuzzy = {
     prebuilt_binaries = {
       -- Use prebuilt binaries for the fuzzy matcher
