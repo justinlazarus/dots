@@ -58,9 +58,12 @@ nvm() {
 # =========================================
 # .NET Development Environment Variables
 # =========================================
-# Database connection (can be overridden by environment-specific config)
-export DOTNET_ConnectionStrings__Database="${DOTNET_ConnectionStrings__Database:-Data Source=localhost,1433;Database=intl-depot-db;Integrated Security=false;User ID=SA;Password=Intl@depot1;TrustServerCertificate=True;}"
+export CWIMS_ADMIN_PASSWORD="Costco123@"
+export Database__DepotDbConnectionString="Server=localhost,1433;Database=depot-db;User Id=sa;Password=Costco12345@;TrustServerCertificate=true;Encrypt=false;"
+export Database__ReadOnlyDepotDbConnectionString="Server=localhost,1433;Database=depot-db;User Id=sa;Password=Costco12345@;TrustServerCertificate=true;Encrypt=false;"
 export DOTNET_MessagingOptions__Namespace="${DOTNET_MessagingOptions__Namespace:-amqp://guest:guest@localhost:5672/}"
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317"
+export ASPNETCORE_ENVIRONMENT=Development
 
 # =========================================
 # Angular Development Environment Variables
@@ -82,6 +85,7 @@ fi
 # =========================================
 #export NODE_EXTRA_CA_CERTS=/Users/jlazarus/costco-certs.pem
 #export SSL_CERT_FILE=/Users/jlazarus/costco-certs.pem
+REQUESTS_CA_BUNDLE=/Users/jlazarus/.ssh/cacert.pem
 
 # =========================================
 # Aliases

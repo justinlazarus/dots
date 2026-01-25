@@ -1,6 +1,6 @@
 #!/bin/zsh
 # -----------------------------------------------------------------------------
-# wm.sh - Worktree Manager (Static Header)
+# wm.sh - Worktree Manager (Ultra-Minimalist Naming)
 # -----------------------------------------------------------------------------
 export PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin:/opt/homebrew/sbin
 
@@ -11,13 +11,16 @@ SCRIPT_PATH=${0:a}
 COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
 if [[ -z "$COMMON_DIR" ]]; then
     if [[ "$1" != --gen* ]]; then
-        echo "Not a git repo."
+        echo "Error: Not a git repository."
+        echo "Navigate to a git project and try again."
+        read -k 1 "REPLY?Press any key to exit..."
         exit 1
     fi
     exit 0
 fi
 
 MAIN_REPO_PATH=$(realpath "$COMMON_DIR/.." 2>/dev/null)
+# We calculate REPO_NAME only for context, but we won't use it in the session name anymore
 REPO_NAME=$(basename "$MAIN_REPO_PATH" 2>/dev/null | tr '.' '-')
 PARENT_DIR=$(dirname "$MAIN_REPO_PATH" 2>/dev/null)
 TAB=$'\t'
@@ -26,10 +29,7 @@ TAB=$'\t'
 #  DATA GENERATOR
 # =============================================================================
 generate_data() {
-    # Safety: Ensure we are inside the repo before running commands
     cd "$MAIN_REPO_PATH" || return 0
-    
-    # Disable exit-on-error to prevent partial failures from crashing the pipe
     setopt +o errexit 2>/dev/null
 
     local fetch_prs=$1
@@ -37,7 +37,7 @@ generate_data() {
     typeset -A seen_branches
     typeset -A pr_map
 
-    # A. Fetch PRs (Silently)
+    # A. Fetch PRs
     if [[ "$fetch_prs" == "true" ]] && command -v gh >/dev/null; then
         while read -r num branch_name; do
             pr_map[$branch_name]=$num
@@ -52,9 +52,13 @@ generate_data() {
             full_branch="${line#branch refs/heads/}"
             seen_branches[$full_branch]=1
             
-            safe_branch=${full_branch//\//-}
+            # LOGIC: Short Name (No Repo Prefix)
+            short_branch="${full_branch##*feature/}"
+            safe_branch=${short_branch//\//-}
             safe_branch=${safe_branch//./-}
-            session_name="$REPO_NAME-$safe_branch"
+            
+            # FIX: Session name is JUST the branch part now
+            session_name="$safe_branch"
             
             if tmux has-session -t "$session_name" 2>/dev/null; then
                 state="●"
@@ -125,8 +129,6 @@ RELOAD_CMD="cd '$MAIN_REPO_PATH' && zsh '$SCRIPT_PATH' --gen-full 2>&1 || true"
 PREVIEW_CMD="git log -30 --color=always --graph --format='%C(yellow)%h%C(reset) %C(green)(%ar)%C(reset) %C(blue)<%an>%C(reset) %s' {5} 2>/dev/null"
 
 # 3. Run FZF
-# - We set the static header immediately.
-# - We removed 'change-header' so the text never flickers or changes.
 selected=$(echo "$INITIAL_LIST" | fzf --ansi \
     --delimiter "$TAB" \
     --with-nth 2 \
@@ -137,14 +139,20 @@ selected=$(echo "$INITIAL_LIST" | fzf --ansi \
     --reverse \
     --expect=ctrl-x,ctrl-d,ctrl-o)
 
-[[ -z "$selected" ]] && exit 0
+if [[ -z "$selected" ]]; then
+    tput init 2>/dev/null
+    exit 0
+fi
 
 # 4. Parse Selection
 lines=("${(@f)selected}")
 key=${lines[1]}
 item=${lines[2]}
 
-[[ -z "$item" ]] && exit 0
+if [[ -z "$item" ]]; then
+    tput init 2>/dev/null
+    exit 0
+fi
 
 parts=("${(@s/	/)item}")
 if [[ ${#parts} -lt 4 ]]; then parts=("${(@s/$TAB/)item}"); fi
@@ -158,19 +166,28 @@ branch="${branch%"${branch##*[![:space:]]}"}"
 target_dir="${target_dir#"${target_dir%%[![:space:]]*}"}"   
 target_dir="${target_dir%"${target_dir##*[![:space:]]}"}"
 
-# Session Name
-safe_branch=${branch//\//-}
+# --- LOGIC: Short Name Generation ---
+# 1. Strip everything up to and including 'feature/'
+short_branch="${branch##*feature/}"
+# 2. Sanitize for filename/session compatibility
+safe_branch=${short_branch//\//-}
 safe_branch=${safe_branch//./-}
-session_name="$REPO_NAME-$safe_branch"
+
+# FIX: No Repo Prefix
+session_name="$safe_branch"
 
 # 5. Handle Actions
 if [[ "$key" == "ctrl-x" ]]; then
     tmux kill-session -t "$session_name" 2>/dev/null
+    tput init
+    echo "Session killed: $session_name"
     exit 0
 elif [[ "$key" == "ctrl-d" ]]; then
-    [[ "$target_dir" == "$MAIN_REPO_PATH" ]] && exit 1
+    [[ "$target_dir" == "$MAIN_REPO_PATH" ]] && echo "Cannot delete main repo." && exit 1
     tmux kill-session -t "$session_name" 2>/dev/null
     git worktree remove "$target_dir" --force
+    tput init
+    echo "Worktree deleted: $target_dir"
     exit 0
 elif [[ "$key" == "ctrl-o" ]]; then
     tmux display-message "Opening PR and Switching..."
@@ -179,7 +196,9 @@ fi
 
 # 6. Create Logic
 if [[ "$target_dir" == "CREATE_NEEDED" ]]; then
-    target_dir="$PARENT_DIR/$REPO_NAME-$safe_branch"
+    # FIX: Create folder without Repo Prefix
+    target_dir="$PARENT_DIR/$safe_branch"
+    
     if [[ ! -d "$target_dir" ]]; then
         if git show-ref --verify --quiet "refs/heads/$branch"; then
             git worktree add "$target_dir" "$branch"
@@ -191,7 +210,7 @@ fi
 
 # 7. Session Logic
 if [[ -z "$target_dir" || "$target_dir" == "/" ]]; then
-    tmux display-message "Error: Invalid target directory."
+    echo "Error: Invalid target directory."
     exit 1
 fi
 
@@ -203,20 +222,39 @@ if ! tmux has-session -t "$session_name" 2>/dev/null; then
     done
     
     if [[ ! -d "$target_dir" ]]; then
-        tmux display-message "Error: Directory creation failed: $target_dir"
+        echo "Error: Directory creation failed: $target_dir"
         read -k 1
         exit 1
     fi
 
+    # --- SESSION STARTUP ---
+    
+    # Check for sub-folder structure and set global prefix
+    if [[ -d "$target_dir/intl-depot" ]]; then
+        CMD_PREFIX="cd intl-depot && "
+    else
+        CMD_PREFIX=""
+    fi
+
+    # 1. Create Session (Window 1: nvim)
     tmux new-session -d -s "$session_name" -c "$target_dir" -n "nvim"
+    tmux send-keys -t "$session_name" "${CMD_PREFIX}nvim ." C-m
+
+    # 2. Create Window (Window 2: git)
     tmux new-window -t "$session_name" -c "$target_dir" -n "git"
+    tmux send-keys -t "$session_name" "${CMD_PREFIX}git status" C-m
+
+    # 3. Create Window (Window 3: nx)
     tmux new-window -t "$session_name" -c "$target_dir" -n "nx"
-    tmux select-window -t "$session_name:nvim"
+    tmux send-keys -t "$session_name" "${CMD_PREFIX}npm i && npx nx run-many -t build" C-m
+
+    # Focus back on nvim window
+    tmux select-window -t "$session_name:nvim" 2>/dev/null || tmux select-window -t "$session_name:0"
 fi
 
 # 8. Switch
 if [[ -n "$TMUX" ]]; then
     tmux switch-client -t "$session_name"
 else
-    tmux attach-session -t "$session_name"
+    tmux attach-session -t "$session_name" || read -k 1 "REPLY?Error attaching. Press any key to exit..."
 fi
