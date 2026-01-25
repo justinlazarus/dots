@@ -91,12 +91,10 @@ if command -v eza >/dev/null 2>&1; then
     alias ls='eza --icons'
     alias l='eza -la --icons'
     alias ll='eza -la --icons'
-    alias lt='eza -la --sort=modified --icons'
     alias tree='eza --tree --icons'
 else
     alias l='ls -la'
     alias ll='ls -la'
-    alias lt='ls -lat'
 fi
 
 # FZF with preview functionality
