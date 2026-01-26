@@ -4,6 +4,7 @@ mod models;
 mod parser;
 mod search;
 mod storage;
+mod summary;
 mod ui;
 
 use anyhow::{Context, Result};
@@ -38,8 +39,13 @@ fn main() -> Result<()> {
     let content = storage::read_log_file(&log_path)?;
     let entries = parser::parse_log_file(&content, year)?;
 
+    // Load summaries
+    let summary_content = storage::read_summary_file(&log_path)?;
+    let monthly_summaries = summary::parse_summary_file(&summary_content, year)?;
+
     // Initialize app state
     let mut app = AppState::new(log_path, year, entries);
+    app.monthly_summaries = monthly_summaries;
     
     // Initialize tag state for current date
     update_tag_state(&mut app);
@@ -206,13 +212,13 @@ fn handle_daily_view_keys<B: ratatui::backend::Backend + Write>(
             app.mode = AppMode::SearchView;
         }
         KeyCode::Char('j') => {
-            app.prev_day();  // j = down = earlier date (more idiomatic)
+            app.next_day();  // j = next day (forward in time)
             app.scroll_offset = 0;
             app.day_search_query.clear();
             update_tag_state(app);
         }
         KeyCode::Char('k') => {
-            app.next_day();  // k = up = later date (more idiomatic)
+            app.prev_day();  // k = previous day (backward in time)
             app.scroll_offset = 0;
             app.day_search_query.clear();
             update_tag_state(app);
@@ -242,17 +248,13 @@ fn handle_daily_view_keys<B: ratatui::backend::Backend + Write>(
             app.jump_input.clear();
             app.mode = AppMode::JumpToDate;
         }
-        KeyCode::Char('n') => {
-            // Quick entry with last location
-            handle_new_entry(app, true, terminal)?;
-        }
-        KeyCode::Char('N') => {
-            // Full entry - prompt for location
-            handle_new_entry(app, false, terminal)?;
-        }
         KeyCode::Char('i') => {
-            // Edit entry
-            handle_edit_entry(app, terminal)?;
+            // Edit existing entry or create new entry
+            handle_edit_or_create_entry(app, terminal)?;
+        }
+        KeyCode::Char('I') => {
+            // Edit summary
+            handle_edit_summary(app, terminal)?;
         }
         KeyCode::Char('d') => {
             // Scroll down (Ctrl+d handled separately)
@@ -290,7 +292,8 @@ fn handle_select_entry_keys<B: ratatui::backend::Backend + Write>(
         }
         KeyCode::Char('j') | KeyCode::Down => {
             let entries = app.get_entries_for_date(&app.current_date);
-            if app.selected_entry_index + 1 < entries.len() {
+            // +1 for "+ New Entry" option at index 0
+            if app.selected_entry_index + 1 <= entries.len() {
                 app.selected_entry_index += 1;
             }
         }
@@ -300,50 +303,59 @@ fn handle_select_entry_keys<B: ratatui::backend::Backend + Write>(
             }
         }
         KeyCode::Enter => {
-            // Edit the selected entry
             let idx = app.selected_entry_index;
-            let entries = app.get_entries_for_date(&app.current_date);
             
-            if let Some(entry) = entries.get(idx) {
-                let date_str = entry.date.format("%Y-%m-%d").to_string();
-                let time_str = entry.time.format("%H:%M:%S").to_string();
+            if idx == 0 {
+                // "+ New Entry" was selected - create new entry
+                app.mode = AppMode::DailyView;
+                handle_create_new_entry(app, terminal)?;
+            } else {
+                // Existing entry was selected - edit it
+                // Subtract 1 because index 0 is "+ New Entry"
+                let entry_idx = idx - 1;
+                let entries = app.get_entries_for_date(&app.current_date);
                 
-                // Suspend TUI and launch editor
-                suspend_tui(terminal)?;
-                
-                let result = editor::edit_existing_entry(
-                    &date_str,
-                    &time_str,
-                    &entry.day_of_week,
-                    &entry.location,
-                    &entry.content,
-                    entry.tag.as_deref(),
-                )?;
-                
-                resume_tui(terminal)?;
-                
-                if let Some((location, content, tag)) = result {
-                    // Update entry
-                    let mut updated_entry = entry.clone();
-                    updated_entry.location = location.clone();
-                    updated_entry.content = content;
-                    updated_entry.tag = tag;
+                if let Some(entry) = entries.get(entry_idx) {
+                    let date_str = entry.date.format("%Y-%m-%d").to_string();
+                    let time_str = entry.time.format("%H:%M:%S").to_string();
                     
-                    let serialized = parser::update_entry(
-                        &mut app.entries,
-                        app.current_date,
-                        idx,
-                        updated_entry,
-                        app.year,
+                    // Suspend TUI and launch editor
+                    suspend_tui(terminal)?;
+                    
+                    let result = editor::edit_existing_entry(
+                        &date_str,
+                        &time_str,
+                        &entry.day_of_week,
+                        &entry.location,
+                        &entry.content,
+                        entry.tag.as_deref(),
                     )?;
                     
-                    storage::write_log_file(&app.log_file_path, &serialized)?;
-                    app.last_location = Some(location);
-                    update_tag_state(app);
+                    resume_tui(terminal)?;
+                    
+                    if let Some((location, content, tag)) = result {
+                        // Update entry
+                        let mut updated_entry = entry.clone();
+                        updated_entry.location = location.clone();
+                        updated_entry.content = content;
+                        updated_entry.tag = tag;
+                        
+                        let serialized = parser::update_entry(
+                            &mut app.entries,
+                            app.current_date,
+                            entry_idx,
+                            updated_entry,
+                            app.year,
+                        )?;
+                        
+                        storage::write_log_file(&app.log_file_path, &serialized)?;
+                        app.last_location = Some(location);
+                        update_tag_state(app);
+                    }
                 }
+                
+                app.mode = AppMode::DailyView;
             }
-            
-            app.mode = AppMode::DailyView;
         }
         _ => {}
     }
@@ -497,17 +509,22 @@ fn handle_jump_to_date_keys(app: &mut AppState, key: KeyCode) -> Result<()> {
     Ok(())
 }
 
-fn handle_new_entry<B: ratatui::backend::Backend + Write>(
+fn handle_edit_or_create_entry<B: ratatui::backend::Backend + Write>(
     app: &mut AppState,
-    use_last_location: bool,
+    _terminal: &mut Terminal<B>,
+) -> Result<()> {
+    // Always show selection menu with "+ New Entry" option at top
+    app.selected_entry_index = 0;
+    app.mode = AppMode::SelectEntry;
+    Ok(())
+}
+
+fn handle_create_new_entry<B: ratatui::backend::Backend + Write>(
+    app: &mut AppState,
     terminal: &mut Terminal<B>,
 ) -> Result<()> {
-    // Determine location
-    let location = if use_last_location {
-        app.last_location.clone()
-    } else {
-        None
-    };
+    // Always use last location (can be changed in editor)
+    let location = app.last_location.clone();
     
     // Determine default tag based on current filter
     let default_tag = match &app.current_tag_filter {
@@ -516,20 +533,33 @@ fn handle_new_entry<B: ratatui::backend::Backend + Write>(
         TagFilter::All => Some("log".to_string()),
     };
 
+    // Check if current_date is today
+    let today = Local::now().date_naive();
+    let is_today = app.current_date == today;
+    
     // Suspend TUI and launch editor
     suspend_tui(terminal)?;
     
-    let result = editor::edit_new_entry(location, default_tag)?;
+    let result = editor::edit_new_entry(location, default_tag, app.current_date, is_today)?;
     
     resume_tui(terminal)?;
 
     if let Some((location, content, tag)) = result {
-        // Create new entry
-        let now = Local::now();
+        // Create new entry for the selected date
+        let entry_time = if is_today {
+            // Use current time for today
+            Local::now().time()
+        } else {
+            // Use a placeholder time for past/future dates (noon)
+            chrono::NaiveTime::from_hms_opt(12, 0, 0).unwrap()
+        };
+        
+        let day_of_week = app.current_date.format("%A").to_string();
+        
         let mut entry = models::LogEntry::new(
-            now.date_naive(),
-            now.time(),
-            now.format("%A").to_string(),
+            app.current_date,
+            entry_time,
+            day_of_week,
             location.clone(),
             content,
         );
@@ -540,7 +570,6 @@ fn handle_new_entry<B: ratatui::backend::Backend + Write>(
         storage::write_log_file(&app.log_file_path, &serialized)?;
         
         app.last_location = Some(location);
-        app.current_date = now.date_naive();
         
         // Update tag state after adding new entry
         update_tag_state(app);
@@ -549,61 +578,131 @@ fn handle_new_entry<B: ratatui::backend::Backend + Write>(
     Ok(())
 }
 
-fn handle_edit_entry<B: ratatui::backend::Backend + Write>(
+fn handle_edit_summary<B: ratatui::backend::Backend + Write>(
     app: &mut AppState,
     terminal: &mut Terminal<B>,
 ) -> Result<()> {
-    let entries = app.get_entries_for_date(&app.current_date);
-
-    if entries.is_empty() {
-        // No entries to edit
-        return Ok(());
+    let date_str = app.current_date.format("%Y-%m-%d").to_string();
+    let current_summary = app.monthly_summaries.get_summary(&app.current_date);
+    
+    suspend_tui(terminal)?;
+    
+    let result = editor::edit_summary(&date_str, &current_summary)?;
+    
+    resume_tui(terminal)?;
+    
+    if let Some(new_summary) = result {
+        // Update in-memory summary
+        app.monthly_summaries.summaries.insert(app.current_date, new_summary.clone());
+        
+        // Read entire summary file, update this date, and write back
+        let summary_content = storage::read_summary_file(&app.log_file_path)?;
+        let updated_content = update_summary_in_file(&summary_content, app.current_date, &new_summary, app.year)?;
+        storage::write_summary_file(&app.log_file_path, &updated_content)?;
     }
-
-    if entries.len() == 1 {
-        // Only one entry, edit it directly
-        let entry = &entries[0];
-        let date_str = entry.date.format("%Y-%m-%d").to_string();
-        let time_str = entry.time.format("%H:%M:%S").to_string();
-        
-        suspend_tui(terminal)?;
-        
-        let result = editor::edit_existing_entry(
-            &date_str,
-            &time_str,
-            &entry.day_of_week,
-            &entry.location,
-            &entry.content,
-            entry.tag.as_deref(),
-        )?;
-        
-        resume_tui(terminal)?;
-        
-        if let Some((location, content, tag)) = result {
-            let mut updated_entry = entry.clone();
-            updated_entry.location = location.clone();
-            updated_entry.content = content;
-            updated_entry.tag = tag;
-            
-            let serialized = parser::update_entry(
-                &mut app.entries,
-                app.current_date,
-                0,
-                updated_entry,
-                app.year,
-            )?;
-            
-            storage::write_log_file(&app.log_file_path, &serialized)?;
-            app.last_location = Some(location);
-            update_tag_state(app);
-        }
-    } else {
-        // Multiple entries, show selection UI
-        app.selected_entry_index = 0;
-        app.mode = AppMode::SelectEntry;
-    }
-
+    
     Ok(())
+}
+
+/// Update or add a summary for a specific date in the summary file content
+fn update_summary_in_file(
+    content: &str,
+    date: NaiveDate,
+    new_summary: &str,
+    _year: i32,
+) -> Result<String> {
+    use regex::Regex;
+    
+    let month = date.month();
+    let day = date.day();
+    let date_pattern = format!("{:02}/{:02}", month, day);
+    
+    let entry_re = Regex::new(r"^-\s*(\d{2})/(\d{2})\s*-?\s*(.*)$").unwrap();
+    
+    let mut lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
+    let mut found = false;
+    
+    // Try to find and update existing entry
+    for line in &mut lines {
+        if let Some(caps) = entry_re.captures(line) {
+            let entry_month: u32 = caps.get(1).unwrap().as_str().parse().unwrap();
+            let entry_day: u32 = caps.get(2).unwrap().as_str().parse().unwrap();
+            
+            if entry_month == month && entry_day == day {
+                // Update existing entry
+                if new_summary.is_empty() {
+                    // Remove the line if summary is empty
+                    *line = String::new();
+                } else {
+                    *line = format!("- {} {}", date_pattern, new_summary);
+                }
+                found = true;
+                break;
+            }
+        }
+    }
+    
+    // If not found and summary is not empty, add new entry
+    if !found && !new_summary.is_empty() {
+        // Find the right section to add the entry
+        let month_name = chrono::Month::try_from(month as u8)
+            .ok()
+            .and_then(|m| Some(format!("{}", m.name())))
+            .unwrap_or_else(|| "Unknown".to_string());
+        
+        let mut insert_pos = None;
+        let mut in_month = false;
+        
+        for (i, line) in lines.iter().enumerate() {
+            // Check if we're in the right month section
+            if line.starts_with("## ") && line.contains(&month_name) {
+                in_month = true;
+                continue;
+            }
+            
+            // If we hit another month section, stop
+            if in_month && line.starts_with("## ") {
+                insert_pos = Some(i);
+                break;
+            }
+            
+            // Look for the right place to insert (sorted by day)
+            if in_month {
+                if let Some(caps) = entry_re.captures(line) {
+                    let entry_month: u32 = caps.get(1).unwrap().as_str().parse().unwrap_or(0);
+                    let entry_day: u32 = caps.get(2).unwrap().as_str().parse().unwrap_or(0);
+                    
+                    if entry_month == month && entry_day > day {
+                        insert_pos = Some(i);
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Insert the new entry
+        let new_line = format!("- {} {}", date_pattern, new_summary);
+        if let Some(pos) = insert_pos {
+            lines.insert(pos, new_line);
+        } else if in_month {
+            // Add at end
+            lines.push(new_line);
+        } else {
+            // Month section doesn't exist, create it
+            lines.push(String::new());
+            lines.push(format!("## {}", month_name));
+            lines.push(String::new());
+            lines.push(new_line);
+        }
+    }
+    
+    // Filter out empty lines that were marked for removal
+    let result = lines.into_iter()
+        .filter(|line| !line.is_empty() || line.trim().is_empty())
+        .collect::<Vec<_>>()
+        .join("\n");
+    
+    Ok(result)
 }
 
 fn suspend_tui<B: ratatui::backend::Backend + Write>(terminal: &mut Terminal<B>) -> Result<()> {

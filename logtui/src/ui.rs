@@ -1,4 +1,5 @@
 use crate::models::{AppMode, AppState};
+use chrono::{Datelike, NaiveDate};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -170,26 +171,45 @@ pub fn render(f: &mut Frame, app: &AppState) {
 }
 
 fn render_daily_view(f: &mut Frame, app: &AppState) {
-    let chunks = Layout::default()
+    // Create vertical layout: header row | content row | footer row
+    let vertical_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3), // Header
-            Constraint::Min(0),     // Content
-            Constraint::Length(3),  // Footer
+            Constraint::Length(3), // Header row (full width)
+            Constraint::Min(0),     // Content row (will split horizontally)
+            Constraint::Length(3),  // Footer row (full width)
         ])
         .split(f.size());
 
-    // Header
-    render_header(f, chunks[0], app);
+    // Split content row horizontally (50/50)
+    let content_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(50), // Summary pane
+            Constraint::Percentage(50), // Detail pane
+        ])
+        .split(vertical_chunks[1]);
 
-    // Content - show entries for current date
-    render_entries(f, chunks[1], app);
+    // Header and footer use full width
+    let header_area = vertical_chunks[0];
+    let footer_area = vertical_chunks[2];
 
-    // Footer
-    render_footer(f, chunks[2], app);
+    // Render full-width header
+    render_combined_header(f, header_area, app);
+
+    // Render left column (summary pane)
+    render_summary_content(f, content_chunks[0], app);
+
+    // Render right column (detail pane)
+    render_entries(f, content_chunks[1], app);
+
+    // Render full-width footer (help text)
+    render_footer(f, footer_area, app);
 }
 
-fn render_header(f: &mut Frame, area: Rect, app: &AppState) {
+fn render_combined_header(f: &mut Frame, area: Rect, app: &AppState) {
+    // Month name + date
+    let month_name = app.current_date.format("%B").to_string(); // Full month name
     let date_str = app.current_date.format("%Y-%m-%d %A").to_string();
     
     // Build tag indicator string
@@ -228,7 +248,8 @@ fn render_header(f: &mut Frame, area: Rect, app: &AppState) {
         format!("  {}", tag_parts.join(" "))
     };
     
-    let header_text = format!("{}{}", date_str, tag_indicator);
+    // Combine: "January  2026-01-26 Sunday  tags..."
+    let header_text = format!("{}  {}{}", month_name, date_str, tag_indicator);
 
     let header = Paragraph::new(header_text)
         .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
@@ -267,11 +288,11 @@ fn render_entries(f: &mut Frame, area: Rect, app: &AppState) {
         // Time and location line with optional tag
         let mut header_spans = Vec::new();
 
-        // Add tag if present (in gray brackets)
+        // Add tag if present (in cyan brackets)
         if let Some(ref tag) = entry.tag {
             header_spans.push(Span::styled(
                 format!("[{}] ", tag),
-                Style::default().fg(Color::Gray),
+                Style::default().fg(Color::Cyan),
             ));
         }
 
@@ -329,10 +350,118 @@ fn render_entries(f: &mut Frame, area: Rect, app: &AppState) {
     f.render_widget(paragraph, area);
 }
 
+fn render_summary_content(f: &mut Frame, area: Rect, app: &AppState) {
+    let current_month = app.current_date.month();
+    let current_year = app.current_date.year();
+    
+    // Calculate available width for text (minus borders and day number formatting)
+    // area.width - 2 (borders) - 1 (bullet space) - 2 (day DD) - 1 (space) = width - 6
+    let content_width = (area.width as usize).saturating_sub(6);
+    let indent = "    "; // 4 spaces for wrapped lines
+    let indent_width = content_width.saturating_sub(4);
+    
+    let mut lines = Vec::new();
+    
+    // Iterate through all days in the month
+    for day in 1..=31 {
+        if let Some(date) = NaiveDate::from_ymd_opt(current_year, current_month, day) {
+            let summary = app.monthly_summaries.get_summary(&date);
+            let is_current = date == app.current_date;
+            
+            if summary.is_empty() {
+                // Empty day: just show day number
+                let line_text = if is_current {
+                    format!(" {:02}", day)
+                } else {
+                    format!(" {:02}", day)
+                };
+                
+                let style = if is_current {
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default().fg(Color::DarkGray)
+                };
+                
+                lines.push(Line::from(vec![Span::styled(line_text, style)]));
+            } else {
+                // Has summary: wrap to multiple lines if needed
+                let words: Vec<&str> = summary.split_whitespace().collect();
+                let mut current_line = String::new();
+                let mut is_first_line = true;
+                
+                for word in words {
+                    let test_line = if current_line.is_empty() {
+                        word.to_string()
+                    } else {
+                        format!("{} {}", current_line, word)
+                    };
+                    
+                    let available = if is_first_line { content_width } else { indent_width };
+                    
+                    if test_line.len() <= available {
+                        current_line = test_line;
+                    } else {
+                        // Current line is full, push it and start new line
+                        if is_first_line {
+                            let line_text = if is_current {
+                                format!(" {:02} {}", day, current_line)
+                            } else {
+                                format!(" {:02} {}", day, current_line)
+                            };
+                            
+                            let style = if is_current {
+                                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                            } else {
+                                Style::default()
+                            };
+                            
+                            lines.push(Line::from(vec![Span::styled(line_text, style)]));
+                            is_first_line = false;
+                        } else {
+                            lines.push(Line::from(format!("{}{}", indent, current_line)));
+                        }
+                        
+                        current_line = word.to_string();
+                    }
+                }
+                
+                // Push remaining text
+                if !current_line.is_empty() {
+                    if is_first_line {
+                        let line_text = if is_current {
+                            format!(" {:02} {}", day, current_line)
+                        } else {
+                            format!(" {:02} {}", day, current_line)
+                        };
+                        
+                        let style = if is_current {
+                            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                        } else {
+                            Style::default()
+                        };
+                        
+                        lines.push(Line::from(vec![Span::styled(line_text, style)]));
+                    } else {
+                        lines.push(Line::from(format!("{}{}", indent, current_line)));
+                    }
+                }
+            }
+        } else {
+            break; // Month doesn't have this many days
+        }
+    }
+    
+    let paragraph = Paragraph::new(lines)
+        .block(Block::default().borders(Borders::ALL))
+        .scroll((0, 0));
+    
+    f.render_widget(paragraph, area);
+}
+
 fn render_footer(f: &mut Frame, area: Rect, app: &AppState) {
     let help_text = match &app.mode {
         AppMode::DailyView => {
-            "j/k:day  h/l:tag  d/u:scroll  n:new N:new+loc i:edit /:day-search Ctrl+s:global c:cal t:today ::jump q:quit"
+            "j/k:day  h/l:tag  d/u:scroll  i:edit/new I:edit-summary /:day-search Ctrl+s:global c:cal t:today ::jump q:quit"
         }
         _ => "",
     };
@@ -346,28 +475,45 @@ fn render_footer(f: &mut Frame, area: Rect, app: &AppState) {
 }
 
 fn render_day_search_view(f: &mut Frame, app: &AppState) {
-    let chunks = Layout::default()
+    // Create vertical layout
+    let vertical_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3), // Header
-            Constraint::Min(0),     // Content with highlights
-            Constraint::Length(3),  // Search input
+            Constraint::Length(3), // Header row (full width)
+            Constraint::Min(0),     // Content row (split horizontally)
+            Constraint::Length(3),  // Search input row (full width)
         ])
         .split(f.size());
 
-    // Header
-    render_header(f, chunks[0], app);
+    // Split content row horizontally (50/50)
+    let content_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(50),
+            Constraint::Percentage(50),
+        ])
+        .split(vertical_chunks[1]);
 
-    // Content - show entries with highlights
-    render_entries(f, chunks[1], app);
+    // Header and search input use full width
+    let header_area = vertical_chunks[0];
+    let search_area = vertical_chunks[2];
 
-    // Search input at bottom
+    // Render full-width header
+    render_combined_header(f, header_area, app);
+
+    // Left side: summary pane
+    render_summary_content(f, content_chunks[0], app);
+
+    // Right side: entries with highlights
+    render_entries(f, content_chunks[1], app);
+
+    // Full-width search input at bottom
     let search_text = format!("Search day: {}", app.day_search_query);
     let search_input = Paragraph::new(search_text)
         .style(Style::default().fg(Color::Yellow))
         .block(Block::default().borders(Borders::ALL).title("ESC:exit | Enter:keep highlighting"));
 
-    f.render_widget(search_input, chunks[2]);
+    f.render_widget(search_input, search_area);
 }
 
 fn render_entry_selection(f: &mut Frame, app: &AppState) {
@@ -381,42 +527,49 @@ fn render_entry_selection(f: &mut Frame, app: &AppState) {
         .split(f.size());
 
     // Header
-    let header = Paragraph::new("Select entry to edit")
+    let header = Paragraph::new("Select entry to edit or create new")
         .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
         .alignment(Alignment::Center)
         .block(Block::default().borders(Borders::ALL));
     f.render_widget(header, chunks[0]);
 
-    // Entry list
+    // Entry list - add "+ New Entry" as first item
     let entries = app.get_entries_for_date(&app.current_date);
-    let items: Vec<ListItem> = entries
-        .iter()
-        .enumerate()
-        .map(|(idx, entry)| {
-            let time_loc = format!("{}. {} - {}", 
-                idx + 1, 
-                entry.time.format("%H:%M:%S"), 
-                entry.location
-            );
-            let preview = entry.content.lines().next().unwrap_or("");
-            let content = format!("{}\n    {}", time_loc, preview);
-            
-            let style = if idx == app.selected_entry_index {
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
-            } else {
-                Style::default()
-            };
-            
-            ListItem::new(content).style(style)
-        })
-        .collect();
+    let mut items: Vec<ListItem> = Vec::new();
+    
+    // First item: "+ New Entry"
+    let new_entry_style = if app.selected_entry_index == 0 {
+        Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(Color::Green)
+    };
+    items.push(ListItem::new("+ New Entry").style(new_entry_style));
+    
+    // Remaining items: existing entries
+    for (idx, entry) in entries.iter().enumerate() {
+        let time_loc = format!("{}. {} - {}", 
+            idx + 1, 
+            entry.time.format("%H:%M:%S"), 
+            entry.location
+        );
+        let preview = entry.content.lines().next().unwrap_or("");
+        let content = format!("{}\n    {}", time_loc, preview);
+        
+        let style = if idx + 1 == app.selected_entry_index {
+            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default()
+        };
+        
+        items.push(ListItem::new(content).style(style));
+    }
 
     let list = List::new(items)
         .block(Block::default().borders(Borders::ALL));
     f.render_widget(list, chunks[1]);
 
     // Footer
-    let footer = Paragraph::new("j/k:navigate Enter:edit Esc:cancel")
+    let footer = Paragraph::new("j/k:navigate Enter:select Esc:cancel")
         .style(Style::default().fg(Color::Gray))
         .alignment(Alignment::Center)
         .block(Block::default().borders(Borders::ALL));

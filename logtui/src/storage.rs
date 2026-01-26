@@ -64,6 +64,43 @@ pub fn create_log_file_if_missing(path: &Path, year: i32) -> Result<()> {
     Ok(())
 }
 
+/// Get the path to the summary file for a given log file
+pub fn get_summary_path(log_path: &PathBuf) -> Result<PathBuf> {
+    let parent = log_path.parent()
+        .context("Log file has no parent directory")?;
+    
+    let summary_filename = log_path
+        .file_stem()
+        .context("Log file has no filename")?
+        .to_str()
+        .context("Invalid filename")?;
+    
+    Ok(parent.join(format!("{}-summaries.md", summary_filename)))
+}
+
+/// Read the summary file for the current year
+/// Returns empty string if file doesn't exist
+pub fn read_summary_file(log_path: &PathBuf) -> Result<String> {
+    // Given: /Users/djpoo/log/2026/2026.md
+    // Find:  /Users/djpoo/log/2026/2026-summaries.md
+    
+    let summary_path = get_summary_path(log_path)?;
+    
+    if !summary_path.exists() {
+        return Ok(String::new());
+    }
+    
+    fs::read_to_string(summary_path)
+        .context("Failed to read summary file")
+}
+
+/// Write the summary file
+pub fn write_summary_file(log_path: &PathBuf, content: &str) -> Result<()> {
+    let summary_path = get_summary_path(log_path)?;
+    fs::write(&summary_path, content)
+        .with_context(|| format!("Failed to write summary file: {}", summary_path.display()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

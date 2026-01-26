@@ -21,13 +21,33 @@ fn get_editor() -> String {
 
 /// Open external editor for creating a new entry
 /// Returns (location, content, tag) written by the user, or None if cancelled
-pub fn edit_new_entry(location: Option<String>, default_tag: Option<String>) -> Result<Option<(String, String, Option<String>)>> {
-    let now = Local::now();
-    let header_base = format!(
-        "## {} {} - ",
-        now.format("%Y-%m-%d %H:%M:%S"),
-        now.format("%A")
-    );
+pub fn edit_new_entry(
+    location: Option<String>,
+    default_tag: Option<String>,
+    date: chrono::NaiveDate,
+    is_today: bool,
+) -> Result<Option<(String, String, Option<String>)>> {
+    use chrono::Datelike;
+    
+    let header_base = if is_today {
+        // Use current timestamp for today
+        let now = Local::now();
+        format!(
+            "## {} {} - ",
+            now.format("%Y-%m-%d %H:%M:%S"),
+            now.format("%A")
+        )
+    } else {
+        // Use placeholder for past/future dates
+        let day_of_week = chrono::NaiveDate::from_ymd_opt(date.year(), date.month(), date.day())
+            .and_then(|d| Some(d.format("%A").to_string()))
+            .unwrap_or_else(|| "Unknown".to_string());
+        format!(
+            "## {} <added after the fact> {} - ",
+            date.format("%Y-%m-%d"),
+            day_of_week
+        )
+    };
 
     // Create temp file with .md extension
     let mut temp_file = NamedTempFile::with_suffix(".md").context("Failed to create temp file")?;
@@ -171,6 +191,50 @@ fn parse_edited_content_with_tag(content: &str, location_needed: bool) -> Result
     }
 
     Ok(Some((location, content_str, tag)))
+}
+
+/// Open external editor for editing a daily summary
+/// Returns the edited summary text, or None if cancelled
+pub fn edit_summary(date_str: &str, current_summary: &str) -> Result<Option<String>> {
+    // Create temp file with .md extension
+    let mut temp_file = NamedTempFile::with_suffix(".md").context("Failed to create temp file")?;
+    
+    // Write header and current summary
+    writeln!(temp_file, "# Summary for {}", date_str)?;
+    writeln!(temp_file, "# Write a brief summary of the day below")?;
+    writeln!(temp_file, "# Lines starting with # will be ignored")?;
+    writeln!(temp_file)?;
+    writeln!(temp_file, "{}", current_summary)?;
+    
+    temp_file.flush()?;
+    let temp_path = temp_file.path().to_path_buf();
+
+    // Launch editor
+    let editor = get_editor();
+    let status = Command::new(&editor)
+        .arg(&temp_path)
+        .status()
+        .with_context(|| format!("Failed to launch editor: {}", editor))?;
+
+    if !status.success() {
+        return Ok(None);
+    }
+
+    // Read back the content
+    let content = fs::read_to_string(&temp_path).context("Failed to read temp file")?;
+    
+    // Parse the content - skip comment lines
+    let mut content_lines = Vec::new();
+    for line in content.lines() {
+        if line.trim().starts_with('#') {
+            continue;
+        }
+        content_lines.push(line);
+    }
+    
+    let summary = content_lines.join("\n").trim().to_string();
+    
+    Ok(Some(summary))
 }
 
 #[cfg(test)]

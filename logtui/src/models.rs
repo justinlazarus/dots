@@ -1,6 +1,7 @@
 use chrono::{NaiveDate, NaiveTime};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use crate::summary::MonthlySummaries;
 
 #[derive(Debug, Clone)]
 pub struct LogEntry {
@@ -80,6 +81,7 @@ pub struct AppState {
     pub current_tag_filter: TagFilter,
     pub available_tags: Vec<(String, usize)>,  // (tag, count) sorted by count desc
     pub untagged_count: usize,
+    pub monthly_summaries: MonthlySummaries,  // daily summaries from summary file
 }
 
 impl AppState {
@@ -112,6 +114,7 @@ impl AppState {
             current_tag_filter: TagFilter::All,
             available_tags: Vec::new(),
             untagged_count: 0,
+            monthly_summaries: MonthlySummaries::new(),
         }
     }
 
