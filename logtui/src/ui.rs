@@ -195,6 +195,15 @@ fn render_header(f: &mut Frame, area: Rect, app: &AppState) {
     // Build tag indicator string
     let mut tag_parts = Vec::new();
     
+    // Add "all" at the beginning
+    let total_count: usize = app.available_tags.iter().map(|(_, c)| c).sum::<usize>() 
+        + app.untagged_count;
+    if matches!(app.current_tag_filter, crate::models::TagFilter::All) {
+        tag_parts.push(format!("[all: {}]", total_count));
+    } else {
+        tag_parts.push(format!("all: {}", total_count));
+    }
+    
     // Add each tag with count
     for (tag, count) in &app.available_tags {
         if matches!(app.current_tag_filter, crate::models::TagFilter::Tag(ref t) if t == tag) {
@@ -211,15 +220,6 @@ fn render_header(f: &mut Frame, area: Rect, app: &AppState) {
         } else {
             tag_parts.push(format!("untagged: {}", app.untagged_count));
         }
-    }
-    
-    // Add "all" at the end
-    let total_count: usize = app.available_tags.iter().map(|(_, c)| c).sum::<usize>() 
-        + app.untagged_count;
-    if matches!(app.current_tag_filter, crate::models::TagFilter::All) {
-        tag_parts.push(format!("[all: {}]", total_count));
-    } else {
-        tag_parts.push(format!("all: {}", total_count));
     }
     
     let tag_indicator = if tag_parts.is_empty() {

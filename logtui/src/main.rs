@@ -119,24 +119,8 @@ fn update_tag_state(app: &mut AppState) {
             .then_with(|| a.0.cmp(&b.0))  // Then alphabetically
     });
     
-    // Find smart default (most common tag, prefer #log on tie)
-    let default_filter = if let Some((first_tag, first_count)) = tags.first() {
-        // Check for ties with same count as first
-        let tied_tags: Vec<&String> = tags.iter()
-            .filter(|(_, count)| *count == *first_count)
-            .map(|(tag, _)| tag)
-            .collect();
-        
-        if tied_tags.contains(&&"log".to_string()) {
-            TagFilter::Tag("log".to_string())
-        } else {
-            TagFilter::Tag(first_tag.clone())
-        }
-    } else if untagged_count > 0 {
-        TagFilter::Untagged
-    } else {
-        TagFilter::All
-    };
+    // Always default to All filter
+    let default_filter = TagFilter::All;
     
     app.available_tags = tags;
     app.untagged_count = untagged_count;
@@ -149,8 +133,11 @@ enum Direction {
 }
 
 fn cycle_tag_filter(app: &mut AppState, direction: Direction) {
-    // Build filter list: tags by count, untagged (if any), all
+    // Build filter list: all first, then tags by count, then untagged (if any)
     let mut filters: Vec<TagFilter> = Vec::new();
+    
+    // Add "all" at the beginning
+    filters.push(TagFilter::All);
     
     // Add all tags (already sorted by count)
     for (tag, _) in &app.available_tags {
@@ -161,9 +148,6 @@ fn cycle_tag_filter(app: &mut AppState, direction: Direction) {
     if app.untagged_count > 0 {
         filters.push(TagFilter::Untagged);
     }
-    
-    // Add "all" at the end
-    filters.push(TagFilter::All);
     
     if filters.is_empty() {
         return; // No filters available
@@ -221,14 +205,14 @@ fn handle_daily_view_keys<B: ratatui::backend::Backend + Write>(
             app.selected_entry_index = 0;
             app.mode = AppMode::SearchView;
         }
-        KeyCode::Char('k') => {
-            app.prev_day();
+        KeyCode::Char('j') => {
+            app.prev_day();  // j = down = earlier date (more idiomatic)
             app.scroll_offset = 0;
             app.day_search_query.clear();
             update_tag_state(app);
         }
-        KeyCode::Char('j') => {
-            app.next_day();
+        KeyCode::Char('k') => {
+            app.next_day();  // k = up = later date (more idiomatic)
             app.scroll_offset = 0;
             app.day_search_query.clear();
             update_tag_state(app);
