@@ -27,23 +27,20 @@ pub fn edit_new_entry(
     date: chrono::NaiveDate,
     is_today: bool,
 ) -> Result<Option<(String, String, Option<String>)>> {
-    use chrono::Datelike;
-    
     let header_base = if is_today {
-        // Use current timestamp for today
+        // Include time for today
         let now = Local::now();
         format!(
-            "## {} {} - ",
-            now.format("%Y-%m-%d %H:%M:%S"),
-            now.format("%A")
+            "## {} {} {} - ",
+            date.format("%Y-%m-%d"),
+            now.time().format("%H:%M:%S"),
+            date.format("%A")
         )
     } else {
-        // Use placeholder for past/future dates
-        let day_of_week = chrono::NaiveDate::from_ymd_opt(date.year(), date.month(), date.day())
-            .and_then(|d| Some(d.format("%A").to_string()))
-            .unwrap_or_else(|| "Unknown".to_string());
+        // Omit time for retrospective entries
+        let day_of_week = date.format("%A").to_string();
         format!(
-            "## {} <added after the fact> {} - ",
+            "## {} {} - ",
             date.format("%Y-%m-%d"),
             day_of_week
         )
@@ -89,7 +86,7 @@ pub fn edit_new_entry(
 }
 
 /// Open external editor for editing an existing entry
-/// Returns (location, content, tag) after editing, or None if cancelled
+/// Returns (date, time, day_of_week, location, content, tag) after editing, or None if cancelled
 pub fn edit_existing_entry(
     date_str: &str,
     time_str: &str,
@@ -97,7 +94,7 @@ pub fn edit_existing_entry(
     location: &str,
     content: &str,
     tag: Option<&str>,
-) -> Result<Option<(String, String, Option<String>)>> {
+) -> Result<Option<(String, String, String, String, String, Option<String>)>> {
     let tag_suffix = tag.map(|t| format!(" #{}", t)).unwrap_or_default();
     let header = format!("## {} {} {} - {}{}", date_str, time_str, day_of_week, location, tag_suffix);
 
@@ -124,8 +121,68 @@ pub fn edit_existing_entry(
     // Read back the content
     let edited_content = fs::read_to_string(&temp_path).context("Failed to read temp file")?;
     
-    // Parse the edited content
-    parse_edited_content_with_tag(&edited_content, false)
+    // Parse the edited content including datetime
+    parse_edited_entry_with_datetime(&edited_content)
+}
+
+/// Parse edited entry content including datetime
+/// Returns (date, time, day_of_week, location, content, tag) if valid, None if cancelled
+fn parse_edited_entry_with_datetime(content: &str) -> Result<Option<(String, String, String, String, String, Option<String>)>> {
+    use regex::Regex;
+    
+    let lines: Vec<&str> = content.lines().collect();
+    
+    if lines.is_empty() {
+        return Ok(None);
+    }
+
+    // First line should be the header: ## YYYY-MM-DD [HH:MM:SS] DayOfWeek - Location #tag
+    // Time is optional - represents retrospective entry if omitted
+    let header_line = lines[0];
+    
+    // Extract datetime, day of week, location, and tag from header
+    let header_re = Regex::new(r"^##\s+(\d{4}-\d{2}-\d{2})(?:\s+(\d{2}:\d{2}:\d{2}))?\s+(\w+)\s+-\s+(.+?)(?:\s+#(\w+))?$").unwrap();
+    
+    let captures = header_re.captures(header_line);
+    if captures.is_none() {
+        return Ok(None);
+    }
+    
+    let caps = captures.unwrap();
+    let date = caps.get(1).unwrap().as_str().to_string();
+    let time = caps.get(2)
+        .map(|m| m.as_str().to_string())
+        .unwrap_or_else(|| "00:00:00".to_string());
+    let day_of_week = caps.get(3).unwrap().as_str().to_string();
+    let location = caps.get(4).unwrap().as_str().trim().to_string();
+    let tag = caps.get(5).map(|m| m.as_str().to_string());
+
+    // Collect content lines (skip header and comment lines)
+    let mut content_lines = Vec::new();
+    let mut in_content = false;
+
+    for line in lines.iter().skip(1) {
+        if line.trim().is_empty() && !in_content {
+            continue;
+        }
+        
+        // Skip comment lines
+        if line.trim().starts_with('#') {
+            continue;
+        }
+        
+        in_content = true;
+        content_lines.push(*line);
+    }
+
+    let content_str = content_lines.join("\n").trim().to_string();
+    
+    // If content is empty, consider it cancelled
+    if content_str.is_empty() {
+        return Ok(None);
+    }
+
+    Ok(Some((date, time, day_of_week, location, content_str, tag)))
 }
 
 /// Parse the content from the editor, extracting tag from header

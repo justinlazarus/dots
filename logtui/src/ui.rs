@@ -155,7 +155,7 @@ fn highlight_matches(line: &str, query: &str) -> Line<'static> {
     Line::from(spans)
 }
 
-pub fn render(f: &mut Frame, app: &AppState) {
+pub fn render(f: &mut Frame, app: &mut AppState) {
     match &app.mode {
         AppMode::DailyView => render_daily_view(f, app),
         AppMode::SelectEntry => render_entry_selection(f, app),
@@ -170,7 +170,7 @@ pub fn render(f: &mut Frame, app: &AppState) {
     }
 }
 
-fn render_daily_view(f: &mut Frame, app: &AppState) {
+fn render_daily_view(f: &mut Frame, app: &mut AppState) {
     // Create vertical layout: header row | content row | footer row
     let vertical_chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -200,7 +200,7 @@ fn render_daily_view(f: &mut Frame, app: &AppState) {
     // Render left column (summary pane)
     render_summary_content(f, content_chunks[0], app);
 
-    // Render right column (detail pane)
+    // Render right column (detail pane) and update viewport height
     render_entries(f, content_chunks[1], app);
 
     // Render full-width footer (help text)
@@ -259,7 +259,10 @@ fn render_combined_header(f: &mut Frame, area: Rect, app: &AppState) {
     f.render_widget(header, area);
 }
 
-fn render_entries(f: &mut Frame, area: Rect, app: &AppState) {
+fn render_entries(f: &mut Frame, area: Rect, app: &mut AppState) {
+    // Update viewport height for page scrolling (subtract borders and padding)
+    app.viewport_height = area.height.saturating_sub(4) as usize; // 2 for borders, 2 for padding
+    
     let entries = app.get_filtered_entries_for_date(&app.current_date);
 
     if entries.is_empty() {
@@ -296,12 +299,23 @@ fn render_entries(f: &mut Frame, area: Rect, app: &AppState) {
             ));
         }
 
-        // Add time and location (in yellow bold)
-        let time_loc = format!("{} - {}", entry.time.format("%H:%M:%S"), entry.location);
-        header_spans.push(Span::styled(
-            time_loc,
-            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
-        ));
+        // Check if entry has explicit time (not 00:00:00 sentinel)
+        let has_time = entry.time != chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+
+        if has_time {
+            // Entry has time - show time and location in yellow/bold
+            let time_loc = format!("{} - {}", entry.time.format("%H:%M:%S"), entry.location);
+            header_spans.push(Span::styled(
+                time_loc,
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+            ));
+        } else {
+            // Entry has no time (retrospective) - show just location in regular gray
+            header_spans.push(Span::styled(
+                entry.location.clone(),
+                Style::default().fg(Color::Gray),
+            ));
+        }
 
         // Get content lines
         let content_lines: Vec<&str> = entry.content.lines().collect();
@@ -320,32 +334,89 @@ fn render_entries(f: &mut Frame, area: Rect, app: &AppState) {
             if !app.day_search_query.is_empty() {
                 let highlighted = highlight_matches(first_line, &app.day_search_query);
                 for span in highlighted.spans {
-                    header_spans.push(span);
+                    // Apply gray color to retrospective entries
+                    if !has_time {
+                        header_spans.push(Span::styled(span.content.to_string(), Style::default().fg(Color::Gray)));
+                    } else {
+                        header_spans.push(span);
+                    }
                 }
             } else {
                 let parsed = parse_markdown_line(first_line);
                 for span in parsed.spans {
-                    header_spans.push(span);
+                    // Apply gray color to retrospective entries
+                    if !has_time {
+                        header_spans.push(Span::styled(span.content.to_string(), Style::default().fg(Color::Gray)));
+                    } else {
+                        header_spans.push(span);
+                    }
                 }
             }
             
             text.lines.push(Line::from(header_spans));
             
-            // Remaining lines: render normally (no indent)
+            // Remaining lines: render with gray color for retrospective entries
             for line in content_lines.iter().skip(1) {
-                if !app.day_search_query.is_empty() {
-                    text.lines.push(highlight_matches(line, &app.day_search_query));
+                if !has_time {
+                    // Retrospective entry - render in gray
+                    text.lines.push(Line::from(Span::styled(
+                        line.to_string(),
+                        Style::default().fg(Color::Gray)
+                    )));
                 } else {
-                    text.lines.push(parse_markdown_line(line));
+                    // Normal entry - render with highlighting/markdown
+                    if !app.day_search_query.is_empty() {
+                        text.lines.push(highlight_matches(line, &app.day_search_query));
+                    } else {
+                        text.lines.push(parse_markdown_line(line));
+                    }
                 }
             }
         }
     }
 
+    // Calculate wrapped line count
+    // Available width for text: area.width - 2 (borders) - 2 (padding)
+    let text_width = area.width.saturating_sub(4) as usize;
+    let mut total_wrapped_lines = 0;
+    
+    for line in &text.lines {
+        // Calculate how many lines this will wrap to
+        let line_text: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
+        let line_len = line_text.len();
+        if line_len == 0 {
+            total_wrapped_lines += 1; // Empty line
+        } else {
+            let wrapped = (line_len + text_width - 1) / text_width;
+            total_wrapped_lines += wrapped.max(1);
+        }
+    }
+    
+    // Calculate page info
+    let current_page = if app.viewport_height > 0 {
+        (app.scroll_offset / app.viewport_height) + 1
+    } else {
+        1
+    };
+    let total_pages = if app.viewport_height > 0 && total_wrapped_lines > 0 {
+        (total_wrapped_lines + app.viewport_height - 1) / app.viewport_height
+    } else {
+        1
+    };
+    
+    let page_indicator = if total_pages > 1 {
+        format!("Page {}/{}", current_page, total_pages)
+    } else {
+        String::new() // No indicator for single page
+    };
+    
     let paragraph = Paragraph::new(text)
         .wrap(Wrap { trim: false })
         .scroll((app.scroll_offset as u16, 0))
-        .block(Block::default().borders(Borders::ALL));
+        .block(Block::default()
+            .borders(Borders::ALL)
+            .title(page_indicator)
+            .padding(ratatui::widgets::Padding::uniform(1)));
 
     f.render_widget(paragraph, area);
 }
@@ -354,13 +425,30 @@ fn render_summary_content(f: &mut Frame, area: Rect, app: &AppState) {
     let current_month = app.current_date.month();
     let current_year = app.current_date.year();
     
-    // Calculate available width for text (minus borders and day number formatting)
-    // area.width - 2 (borders) - 1 (bullet space) - 2 (day DD) - 1 (space) = width - 6
-    let content_width = (area.width as usize).saturating_sub(6);
-    let indent = "    "; // 4 spaces for wrapped lines
-    let indent_width = content_width.saturating_sub(4);
+    // Split the area into: date column + vertical separator (1) + summary text
+    // Date column needs: 1 (padding left) + 2 (DD) + 1 (space) + 2 (Dy) + 1 (padding right) = 7 + 2 borders = 9
+    let date_width = 9;
     
-    let mut lines = Vec::new();
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Length(date_width),  // Date column with padding
+            Constraint::Length(1),            // Vertical separator
+            Constraint::Min(0),               // Summary text
+        ])
+        .split(area);
+    
+    let date_area = chunks[0];
+    let separator_area = chunks[1];
+    let summary_area = chunks[2];
+    
+    // Calculate available width for summary text
+    let content_width = (summary_area.width as usize).saturating_sub(2); // minus borders
+    let indent = "    "; // 4 spaces for wrapped lines
+    let indent_width = if content_width > 4 { content_width - 4 } else { content_width };
+    
+    let mut date_lines = Vec::new();
+    let mut summary_lines = Vec::new();
     
     // Iterate through all days in the month
     for day in 1..=31 {
@@ -368,23 +456,28 @@ fn render_summary_content(f: &mut Frame, area: Rect, app: &AppState) {
             let summary = app.monthly_summaries.get_summary(&date);
             let is_current = date == app.current_date;
             
-            if summary.is_empty() {
-                // Empty day: just show day number
-                let line_text = if is_current {
-                    format!(" {:02}", day)
-                } else {
-                    format!(" {:02}", day)
-                };
-                
-                let style = if is_current {
-                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
-                } else {
-                    Style::default().fg(Color::DarkGray)
-                };
-                
-                lines.push(Line::from(vec![Span::styled(line_text, style)]));
+            // Get 2-char day abbreviation (Mo, Tu, We, etc.)
+            let day_abbr = date.format("%a").to_string().chars().take(2).collect::<String>();
+            
+            // Date column: "DD Dy" (padding will add space on left and right)
+            let date_text = format!("{:02} {}", day, day_abbr);
+            let date_style = if is_current {
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+            } else if summary.is_empty() {
+                Style::default().fg(Color::DarkGray)
             } else {
-                // Has summary: wrap to multiple lines if needed
+                Style::default()
+            };
+            date_lines.push(Line::from(vec![Span::styled(date_text, date_style)]));
+            
+            // Summary column - collect all lines for this day first
+            let mut day_summary_lines: Vec<Line> = Vec::new();
+            
+            if summary.is_empty() {
+                // No summary - just one empty line
+                day_summary_lines.push(Line::from(""));
+            } else {
+                // Wrap summary text to available width
                 let words: Vec<&str> = summary.split_whitespace().collect();
                 let mut current_line = String::new();
                 let mut is_first_line = true;
@@ -403,24 +496,16 @@ fn render_summary_content(f: &mut Frame, area: Rect, app: &AppState) {
                     } else {
                         // Current line is full, push it and start new line
                         if is_first_line {
-                            let line_text = if is_current {
-                                format!(" {:02} {}", day, current_line)
-                            } else {
-                                format!(" {:02} {}", day, current_line)
-                            };
-                            
                             let style = if is_current {
                                 Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
                             } else {
                                 Style::default()
                             };
-                            
-                            lines.push(Line::from(vec![Span::styled(line_text, style)]));
+                            day_summary_lines.push(Line::from(vec![Span::styled(current_line.clone(), style)]));
                             is_first_line = false;
                         } else {
-                            lines.push(Line::from(format!("{}{}", indent, current_line)));
+                            day_summary_lines.push(Line::from(format!("{}{}", indent, current_line)));
                         }
-                        
                         current_line = word.to_string();
                     }
                 }
@@ -428,22 +513,26 @@ fn render_summary_content(f: &mut Frame, area: Rect, app: &AppState) {
                 // Push remaining text
                 if !current_line.is_empty() {
                     if is_first_line {
-                        let line_text = if is_current {
-                            format!(" {:02} {}", day, current_line)
-                        } else {
-                            format!(" {:02} {}", day, current_line)
-                        };
-                        
                         let style = if is_current {
                             Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
                         } else {
                             Style::default()
                         };
-                        
-                        lines.push(Line::from(vec![Span::styled(line_text, style)]));
+                        day_summary_lines.push(Line::from(vec![Span::styled(current_line, style)]));
                     } else {
-                        lines.push(Line::from(format!("{}{}", indent, current_line)));
+                        day_summary_lines.push(Line::from(format!("{}{}", indent, current_line)));
                     }
+                }
+            }
+            
+            // Now add all lines to summary_lines
+            // For the first line, we already have a date line
+            // For additional lines, add empty date lines
+            for (idx, line) in day_summary_lines.iter().enumerate() {
+                summary_lines.push(line.clone());
+                if idx > 0 {
+                    // Add empty date line for wrapped lines
+                    date_lines.push(Line::from(""));
                 }
             }
         } else {
@@ -451,17 +540,32 @@ fn render_summary_content(f: &mut Frame, area: Rect, app: &AppState) {
         }
     }
     
-    let paragraph = Paragraph::new(lines)
-        .block(Block::default().borders(Borders::ALL))
+    // Render date column with padding
+    let date_paragraph = Paragraph::new(date_lines)
+        .block(Block::default()
+            .borders(Borders::TOP | Borders::BOTTOM | Borders::LEFT)
+            .padding(ratatui::widgets::Padding::horizontal(1)))
         .scroll((0, 0));
+    f.render_widget(date_paragraph, date_area);
     
-    f.render_widget(paragraph, area);
+    // Render vertical separator (using default border color)
+    let separator = Block::default()
+        .borders(Borders::LEFT | Borders::TOP | Borders::BOTTOM);
+    f.render_widget(separator, separator_area);
+    
+    // Render summary column with padding
+    let summary_paragraph = Paragraph::new(summary_lines)
+        .block(Block::default()
+            .borders(Borders::TOP | Borders::BOTTOM | Borders::RIGHT)
+            .padding(ratatui::widgets::Padding::horizontal(1)))
+        .scroll((0, 0));
+    f.render_widget(summary_paragraph, summary_area);
 }
 
 fn render_footer(f: &mut Frame, area: Rect, app: &AppState) {
     let help_text = match &app.mode {
         AppMode::DailyView => {
-            "j/k:day  h/l:tag  d/u:scroll  i:edit/new I:edit-summary /:day-search Ctrl+s:global c:cal t:today ::jump q:quit"
+            "j/k:day  ^n/^p:month  h/l:tag  d/u:scroll ^d/^u:page  i:edit/new I:edit-summary /:search ^s:global c:cal t:today ::jump q:quit"
         }
         _ => "",
     };
@@ -474,7 +578,7 @@ fn render_footer(f: &mut Frame, area: Rect, app: &AppState) {
     f.render_widget(footer, area);
 }
 
-fn render_day_search_view(f: &mut Frame, app: &AppState) {
+fn render_day_search_view(f: &mut Frame, app: &mut AppState) {
     // Create vertical layout
     let vertical_chunks = Layout::default()
         .direction(Direction::Vertical)

@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Context, Result};
+use chrono::Datelike;
 use regex::Regex;
 use std::env;
 use std::fs;
@@ -17,8 +18,12 @@ pub fn find_log_file(cli_override: Option<PathBuf>) -> Result<PathBuf> {
     }
 
     // Priority 2: Find YYYY.md in current working directory
+    // Prefer current year, then most recent year
     let pwd = env::current_dir().context("Failed to get current directory")?;
     let pattern = Regex::new(r"^\d{4}\.md$").unwrap();
+    let current_year = chrono::Local::now().year();
+    
+    let mut found_files: Vec<(i32, PathBuf)> = Vec::new();
 
     for entry in fs::read_dir(&pwd).context("Failed to read current directory")? {
         let entry = entry.context("Failed to read directory entry")?;
@@ -26,13 +31,31 @@ pub fn find_log_file(cli_override: Option<PathBuf>) -> Result<PathBuf> {
         let filename_str = filename.to_string_lossy();
 
         if pattern.is_match(&filename_str) {
-            return Ok(entry.path());
+            // Extract year from filename
+            if let Ok(year) = filename_str.trim_end_matches(".md").parse::<i32>() {
+                found_files.push((year, entry.path()));
+            }
         }
     }
-
-    Err(anyhow!(
-        "No log file found in current directory. Expected format: YYYY.md (e.g., 2026.md)"
-    ))
+    
+    if found_files.is_empty() {
+        return Err(anyhow!(
+            "No log file found in current directory. Expected format: YYYY.md (e.g., 2026.md)"
+        ));
+    }
+    
+    // Sort by year descending and prefer current year
+    found_files.sort_by(|a, b| {
+        if a.0 == current_year {
+            std::cmp::Ordering::Less
+        } else if b.0 == current_year {
+            std::cmp::Ordering::Greater
+        } else {
+            b.0.cmp(&a.0) // Most recent year first
+        }
+    });
+    
+    Ok(found_files[0].1.clone())
 }
 
 /// Extract year from filename (e.g., "2026.md" -> 2026)
@@ -99,6 +122,25 @@ pub fn write_summary_file(log_path: &PathBuf, content: &str) -> Result<()> {
     let summary_path = get_summary_path(log_path)?;
     fs::write(&summary_path, content)
         .with_context(|| format!("Failed to write summary file: {}", summary_path.display()))
+}
+
+/// Find a log file for a specific year in the same directory as the current log file
+/// Creates the file if it doesn't exist
+pub fn find_log_file_for_year(current_log_path: &PathBuf, year: i32) -> Result<PathBuf> {
+    let parent = current_log_path.parent()
+        .context("Log file has no parent directory")?;
+    
+    let target_filename = format!("{}.md", year);
+    let target_path = parent.join(&target_filename);
+    
+    // Create the file if it doesn't exist
+    if !target_path.exists() {
+        let header = format!("# {} Log\n\n", year);
+        fs::write(&target_path, header)
+            .with_context(|| format!("Failed to create log file: {}", target_path.display()))?;
+    }
+    
+    Ok(target_path)
 }
 
 #[cfg(test)]

@@ -8,8 +8,9 @@ use std::collections::HashMap;
 pub fn parse_log_file(content: &str, year: i32) -> Result<HashMap<NaiveDate, Vec<LogEntry>>> {
     let mut entries: HashMap<NaiveDate, Vec<LogEntry>> = HashMap::new();
     
-    // Regex pattern: ## YYYY-MM-DD HH:MM:SS DayOfWeek - Location [#tag]
-    let header_pattern = Regex::new(r"^## (\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) (\w+) - ([^#]+?)(?:\s*#(\w+).*)?$").unwrap();
+    // Regex pattern: ## YYYY-MM-DD [HH:MM:SS] DayOfWeek - Location [#tag]
+    // Time is optional - if missing, represents retrospective entry
+    let header_pattern = Regex::new(r"^## (\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}:\d{2}))? (\w+) - ([^#]+?)(?:\s*#(\w+).*)?$").unwrap();
     
     let lines: Vec<&str> = content.lines().collect();
     let mut i = 0;
@@ -20,16 +21,22 @@ pub fn parse_log_file(content: &str, year: i32) -> Result<HashMap<NaiveDate, Vec
         // Check if this line is an entry header
         if let Some(captures) = header_pattern.captures(line) {
             let date_str = &captures[1];
-            let time_str = &captures[2];
+            let time_str = captures.get(2).map(|m| m.as_str());
             let day_of_week = captures[3].to_string();
             let location = captures[4].trim().to_string();
             let tag = captures.get(5).map(|m| m.as_str().to_string());
             
-            // Parse date and time
+            // Parse date
             let date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
                 .with_context(|| format!("Failed to parse date: {}", date_str))?;
-            let time = NaiveTime::parse_from_str(time_str, "%H:%M:%S")
-                .with_context(|| format!("Failed to parse time: {}", time_str))?;
+            
+            // Parse time - if missing, use 00:00:00 as sentinel
+            let time = if let Some(ts) = time_str {
+                NaiveTime::parse_from_str(ts, "%H:%M:%S")
+                    .with_context(|| format!("Failed to parse time: {}", ts))?
+            } else {
+                NaiveTime::from_hms_opt(0, 0, 0).unwrap()
+            };
             
             // Validate year matches file year
             if date.year() != year {
@@ -68,9 +75,19 @@ pub fn parse_log_file(content: &str, year: i32) -> Result<HashMap<NaiveDate, Vec
         }
     }
     
-    // Sort entries within each date by time
+    // Sort entries within each date
+    // Entries without time (00:00:00) come first, then by time
     for entry_list in entries.values_mut() {
-        entry_list.sort_by_key(|e| e.time);
+        entry_list.sort_by(|a, b| {
+            let a_has_time = a.time != NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+            let b_has_time = b.time != NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+            
+            match (a_has_time, b_has_time) {
+                (false, true) => std::cmp::Ordering::Less,    // a has no time, comes first
+                (true, false) => std::cmp::Ordering::Greater, // b has no time, comes first  
+                _ => a.time.cmp(&b.time),                     // both have or don't have time
+            }
+        });
     }
     
     Ok(entries)
@@ -87,24 +104,39 @@ pub fn serialize_entries(entries: &HashMap<NaiveDate, Vec<LogEntry>>, year: i32)
     for date in dates {
         if let Some(entry_list) = entries.get(date) {
             for entry in entry_list {
-                // Format: ## YYYY-MM-DD HH:MM:SS DayOfWeek - Location [#tag]
-                let header = if let Some(tag) = &entry.tag {
-                    format!(
+                // Check if entry has explicit time (not 00:00:00 sentinel)
+                let has_time = entry.time != NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+                
+                // Format: ## YYYY-MM-DD [HH:MM:SS] DayOfWeek - Location [#tag]
+                let header = match (has_time, &entry.tag) {
+                    (true, Some(tag)) => format!(
                         "## {} {} {} - {} #{}",
                         entry.date.format("%Y-%m-%d"),
                         entry.time.format("%H:%M:%S"),
                         entry.day_of_week,
                         entry.location,
                         tag
-                    )
-                } else {
-                    format!(
+                    ),
+                    (true, None) => format!(
                         "## {} {} {} - {}",
                         entry.date.format("%Y-%m-%d"),
                         entry.time.format("%H:%M:%S"),
                         entry.day_of_week,
                         entry.location
-                    )
+                    ),
+                    (false, Some(tag)) => format!(
+                        "## {} {} - {} #{}",
+                        entry.date.format("%Y-%m-%d"),
+                        entry.day_of_week,
+                        entry.location,
+                        tag
+                    ),
+                    (false, None) => format!(
+                        "## {} {} - {}",
+                        entry.date.format("%Y-%m-%d"),
+                        entry.day_of_week,
+                        entry.location
+                    ),
                 };
                 
                 output.push_str(&header);
@@ -127,9 +159,18 @@ pub fn add_entry(
     let date = entry.date;
     entries.entry(date).or_insert_with(Vec::new).push(entry);
     
-    // Sort entries for this date by time
+    // Sort entries for this date (no time first, then by time)
     if let Some(entry_list) = entries.get_mut(&date) {
-        entry_list.sort_by_key(|e| e.time);
+        entry_list.sort_by(|a, b| {
+            let a_has_time = a.time != NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+            let b_has_time = b.time != NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+            
+            match (a_has_time, b_has_time) {
+                (false, true) => std::cmp::Ordering::Less,
+                (true, false) => std::cmp::Ordering::Greater,
+                _ => a.time.cmp(&b.time),
+            }
+        });
     }
     
     serialize_entries(entries, year)

@@ -211,6 +211,34 @@ fn handle_daily_view_keys<B: ratatui::backend::Backend + Write>(
             app.selected_entry_index = 0;
             app.mode = AppMode::SearchView;
         }
+        KeyCode::Char('n') if modifiers.contains(KeyModifiers::CONTROL) => {
+            // Ctrl+n: Jump to first day of next month
+            if let Some(new_year) = app.jump_to_next_month() {
+                // Year boundary crossed - try to load new year's file
+                if let Err(e) = app.reload_from_year(new_year) {
+                    // If file doesn't exist, stay on current year's last month
+                    eprintln!("Warning: Could not load year {}: {}", new_year, e);
+                    app.jump_to_prev_month(); // Go back to previous month
+                }
+            }
+            app.scroll_offset = 0;
+            app.day_search_query.clear();
+            update_tag_state(app);
+        }
+        KeyCode::Char('p') if modifiers.contains(KeyModifiers::CONTROL) => {
+            // Ctrl+p: Jump to first day of previous month
+            if let Some(new_year) = app.jump_to_prev_month() {
+                // Year boundary crossed - try to load new year's file
+                if let Err(e) = app.reload_from_year(new_year) {
+                    // If file doesn't exist, stay on current year's first month
+                    eprintln!("Warning: Could not load year {}: {}", new_year, e);
+                    app.jump_to_next_month(); // Go back to next month
+                }
+            }
+            app.scroll_offset = 0;
+            app.day_search_query.clear();
+            update_tag_state(app);
+        }
         KeyCode::Char('j') => {
             app.next_day();  // j = next day (forward in time)
             app.scroll_offset = 0;
@@ -256,12 +284,20 @@ fn handle_daily_view_keys<B: ratatui::backend::Backend + Write>(
             // Edit summary
             handle_edit_summary(app, terminal)?;
         }
+        KeyCode::Char('d') if modifiers.contains(KeyModifiers::CONTROL) => {
+            // Ctrl+d: Scroll down one page (viewport height)
+            app.scroll_offset = app.scroll_offset.saturating_add(app.viewport_height);
+        }
+        KeyCode::Char('u') if modifiers.contains(KeyModifiers::CONTROL) => {
+            // Ctrl+u: Scroll up one page (viewport height)
+            app.scroll_offset = app.scroll_offset.saturating_sub(app.viewport_height);
+        }
         KeyCode::Char('d') => {
-            // Scroll down (Ctrl+d handled separately)
+            // d: Scroll down one line
             app.scroll_offset = app.scroll_offset.saturating_add(1);
         }
         KeyCode::Char('u') => {
-            // Scroll up (Ctrl+u handled separately)
+            // u: Scroll up one line
             app.scroll_offset = app.scroll_offset.saturating_sub(1);
         }
         KeyCode::Down => {
@@ -271,10 +307,10 @@ fn handle_daily_view_keys<B: ratatui::backend::Backend + Write>(
             app.scroll_offset = app.scroll_offset.saturating_sub(1);
         }
         KeyCode::PageDown => {
-            app.scroll_offset = app.scroll_offset.saturating_add(10);
+            app.scroll_offset = app.scroll_offset.saturating_add(app.viewport_height);
         }
         KeyCode::PageUp => {
-            app.scroll_offset = app.scroll_offset.saturating_sub(10);
+            app.scroll_offset = app.scroll_offset.saturating_sub(app.viewport_height);
         }
         _ => {}
     }
@@ -333,9 +369,21 @@ fn handle_select_entry_keys<B: ratatui::backend::Backend + Write>(
                     
                     resume_tui(terminal)?;
                     
-                    if let Some((location, content, tag)) = result {
-                        // Update entry
+                    if let Some((date_str, time_str, day_of_week, location, content, tag)) = result {
+                        // Parse the updated date and time
+                        use chrono::NaiveDate as ChronoDate;
+                        use chrono::NaiveTime as ChronoTime;
+                        
+                        let new_date = ChronoDate::parse_from_str(&date_str, "%Y-%m-%d")
+                            .context("Invalid date format")?;
+                        let new_time = ChronoTime::parse_from_str(&time_str, "%H:%M:%S")
+                            .context("Invalid time format")?;
+                        
+                        // Update entry with new datetime
                         let mut updated_entry = entry.clone();
+                        updated_entry.date = new_date;
+                        updated_entry.time = new_time;
+                        updated_entry.day_of_week = day_of_week;
                         updated_entry.location = location.clone();
                         updated_entry.content = content;
                         updated_entry.tag = tag;
@@ -547,11 +595,11 @@ fn handle_create_new_entry<B: ratatui::backend::Backend + Write>(
     if let Some((location, content, tag)) = result {
         // Create new entry for the selected date
         let entry_time = if is_today {
-            // Use current time for today
+            // Use actual current time for today
             Local::now().time()
         } else {
-            // Use a placeholder time for past/future dates (noon)
-            chrono::NaiveTime::from_hms_opt(12, 0, 0).unwrap()
+            // Use 00:00:00 sentinel for retrospective entries (no time)
+            chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap()
         };
         
         let day_of_week = app.current_date.format("%A").to_string();
