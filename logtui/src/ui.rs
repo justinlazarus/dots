@@ -156,10 +156,8 @@ pub fn render(f: &mut Frame, app: &mut AppState) {
     match &app.mode {
         AppMode::DailyView => render_daily_view(f, app),
         AppMode::SelectEntry => render_entry_selection(f, app),
-        AppMode::CalendarView => render_calendar_view(f, app),
         AppMode::SearchView => render_search_view(f, app),
         AppMode::DaySearchView => render_day_search_view(f, app),
-        AppMode::JumpToDate => render_jump_to_date(f, app),
         AppMode::QuickEntry | AppMode::FullEntry | AppMode::EditEntry(_) => {
             // External editor is running, nothing to render
             render_daily_view(f, app)
@@ -609,7 +607,7 @@ fn render_summary_content(f: &mut Frame, area: Rect, app: &AppState) {
 fn render_footer(f: &mut Frame, area: Rect, app: &AppState) {
     let help_text = match &app.mode {
         AppMode::DailyView => {
-            "j/k:day  ^n/^p:month  h/l:tag  d/u:scroll ^d/^u:page  i:edit/new I:edit-summary /:search ^s:global c:cal t:today ::jump q:quit"
+            "[j/k day] [^n/^p month] [h/l tag] [^d/^u page] [i/I edit] [s/^s search] [t today] [q quit]"
         }
         _ => "",
     };
@@ -733,104 +731,6 @@ fn render_entry_selection(f: &mut Frame, app: &AppState) {
     f.render_widget(footer, chunks[2]);
 }
 
-fn render_calendar_view(f: &mut Frame, app: &AppState) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3),  // Header
-            Constraint::Length(12), // Calendar (fixed height)
-            Constraint::Min(5),     // Preview
-            Constraint::Length(3),  // Footer
-        ])
-        .split(f.size());
-
-    // Header
-    let month_year = app.calendar_selected_date.format("%B %Y").to_string();
-    let header = Paragraph::new(month_year)
-        .style(
-            Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::BOLD),
-        )
-        .alignment(Alignment::Center)
-        .block(Block::default().borders(Borders::ALL));
-    f.render_widget(header, chunks[0]);
-
-    // Calendar
-    let calendar_text = crate::calendar::render_calendar(app);
-    let calendar = Paragraph::new(calendar_text)
-        .alignment(Alignment::Center)
-        .block(Block::default().borders(Borders::ALL));
-    f.render_widget(calendar, chunks[1]);
-
-    // Preview of selected date's entries
-    render_calendar_preview(f, chunks[2], app);
-
-    // Footer
-    let footer = Paragraph::new("hjkl:navigate Enter:select Esc:back")
-        .style(Style::default().fg(Color::Gray))
-        .alignment(Alignment::Center)
-        .block(Block::default().borders(Borders::ALL));
-    f.render_widget(footer, chunks[3]);
-}
-
-fn render_calendar_preview(f: &mut Frame, area: Rect, app: &AppState) {
-    let entries = app.get_entries_for_date(&app.calendar_selected_date);
-    let date_str = app.calendar_selected_date.format("%Y-%m-%d %A").to_string();
-
-    if entries.is_empty() {
-        let no_entries = Paragraph::new(format!("{}\n\nNo entries", date_str))
-            .style(Style::default().fg(Color::DarkGray))
-            .alignment(Alignment::Center)
-            .block(Block::default().borders(Borders::ALL).title("Preview"));
-        f.render_widget(no_entries, area);
-        return;
-    }
-
-    // Build preview text with all entries
-    let mut text = Text::default();
-    text.lines.push(Line::from(vec![Span::styled(
-        date_str,
-        Style::default()
-            .fg(Color::Cyan)
-            .add_modifier(Modifier::BOLD),
-    )]));
-    text.lines.push(Line::from(""));
-
-    for (idx, entry) in entries.iter().enumerate() {
-        if idx > 0 {
-            text.lines.push(Line::from(""));
-        }
-
-        // Time and location line
-        let time_loc = format!("{} - {}", entry.time.format("%H:%M:%S"), entry.location);
-        text.lines.push(Line::from(vec![Span::styled(
-            time_loc,
-            Style::default().fg(Color::Yellow),
-        )]));
-
-        // Content preview (first few lines) with markdown parsing
-        let preview_lines: Vec<&str> = entry.content.lines().take(3).collect();
-        for line in preview_lines {
-            text.lines.push(parse_markdown_line(line));
-        }
-
-        // Show "..." if there are more lines
-        if entry.content.lines().count() > 3 {
-            text.lines.push(Line::from(vec![Span::styled(
-                "...",
-                Style::default().fg(Color::DarkGray),
-            )]));
-        }
-    }
-
-    let paragraph = Paragraph::new(text)
-        .wrap(Wrap { trim: false })
-        .block(Block::default().borders(Borders::ALL).title("Preview"));
-
-    f.render_widget(paragraph, area);
-}
-
 fn render_search_view(f: &mut Frame, app: &AppState) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -891,30 +791,6 @@ fn render_search_view(f: &mut Frame, app: &AppState) {
 
     // Footer
     let footer = Paragraph::new("^n/^p:navigate Enter:jump Esc:cancel")
-        .style(Style::default().fg(Color::Gray))
-        .alignment(Alignment::Center)
-        .block(Block::default().borders(Borders::ALL));
-    f.render_widget(footer, chunks[2]);
-}
-
-fn render_jump_to_date(f: &mut Frame, app: &AppState) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3), // Input
-            Constraint::Min(0),    // Empty
-            Constraint::Length(3), // Footer
-        ])
-        .split(f.size());
-
-    // Date input
-    let input = Paragraph::new(format!("Jump to date: {}_", app.jump_input))
-        .style(Style::default().fg(Color::Cyan))
-        .block(Block::default().borders(Borders::ALL));
-    f.render_widget(input, chunks[0]);
-
-    // Footer
-    let footer = Paragraph::new("Enter:jump Esc:cancel")
         .style(Style::default().fg(Color::Gray))
         .alignment(Alignment::Center)
         .block(Block::default().borders(Borders::ALL));

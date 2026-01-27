@@ -22,7 +22,7 @@ pub fn find_log_file(cli_override: Option<PathBuf>) -> Result<PathBuf> {
     let pwd = env::current_dir().context("Failed to get current directory")?;
     let pattern = Regex::new(r"^\d{4}\.md$").unwrap();
     let current_year = chrono::Local::now().year();
-    
+
     let mut found_files: Vec<(i32, PathBuf)> = Vec::new();
 
     for entry in fs::read_dir(&pwd).context("Failed to read current directory")? {
@@ -37,13 +37,13 @@ pub fn find_log_file(cli_override: Option<PathBuf>) -> Result<PathBuf> {
             }
         }
     }
-    
+
     if found_files.is_empty() {
         return Err(anyhow!(
             "No log file found in current directory. Expected format: YYYY.md (e.g., 2026.md)"
         ));
     }
-    
+
     // Sort by year descending and prefer current year
     found_files.sort_by(|a, b| {
         if a.0 == current_year {
@@ -54,7 +54,7 @@ pub fn find_log_file(cli_override: Option<PathBuf>) -> Result<PathBuf> {
             b.0.cmp(&a.0) // Most recent year first
         }
     });
-    
+
     Ok(found_files[0].1.clone())
 }
 
@@ -68,8 +68,7 @@ pub fn extract_year_from_filename(path: &Path) -> Result<i32> {
 
 /// Read the entire log file as a string
 pub fn read_log_file(path: &Path) -> Result<String> {
-    fs::read_to_string(path)
-        .with_context(|| format!("Failed to read log file: {}", path.display()))
+    fs::read_to_string(path).with_context(|| format!("Failed to read log file: {}", path.display()))
 }
 
 /// Write content to the log file
@@ -89,15 +88,16 @@ pub fn create_log_file_if_missing(path: &Path, year: i32) -> Result<()> {
 
 /// Get the path to the summary file for a given log file
 pub fn get_summary_path(log_path: &PathBuf) -> Result<PathBuf> {
-    let parent = log_path.parent()
+    let parent = log_path
+        .parent()
         .context("Log file has no parent directory")?;
-    
+
     let summary_filename = log_path
         .file_stem()
         .context("Log file has no filename")?
         .to_str()
         .context("Invalid filename")?;
-    
+
     Ok(parent.join(format!("{}-summaries.md", summary_filename)))
 }
 
@@ -106,15 +106,14 @@ pub fn get_summary_path(log_path: &PathBuf) -> Result<PathBuf> {
 pub fn read_summary_file(log_path: &PathBuf) -> Result<String> {
     // Given: /Users/djpoo/log/2026/2026.md
     // Find:  /Users/djpoo/log/2026/2026-summaries.md
-    
+
     let summary_path = get_summary_path(log_path)?;
-    
+
     if !summary_path.exists() {
         return Ok(String::new());
     }
-    
-    fs::read_to_string(summary_path)
-        .context("Failed to read summary file")
+
+    fs::read_to_string(summary_path).context("Failed to read summary file")
 }
 
 /// Write the summary file
@@ -127,19 +126,20 @@ pub fn write_summary_file(log_path: &PathBuf, content: &str) -> Result<()> {
 /// Find a log file for a specific year in the same directory as the current log file
 /// Creates the file if it doesn't exist
 pub fn find_log_file_for_year(current_log_path: &PathBuf, year: i32) -> Result<PathBuf> {
-    let parent = current_log_path.parent()
+    let parent = current_log_path
+        .parent()
         .context("Log file has no parent directory")?;
-    
+
     let target_filename = format!("{}.md", year);
     let target_path = parent.join(&target_filename);
-    
+
     // Create the file if it doesn't exist
     if !target_path.exists() {
         let header = format!("# {} Log\n\n", year);
         fs::write(&target_path, header)
             .with_context(|| format!("Failed to create log file: {}", target_path.display()))?;
     }
-    
+
     Ok(target_path)
 }
 

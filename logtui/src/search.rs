@@ -43,7 +43,7 @@ mod tests {
     #[test]
     fn test_search_entries() {
         let mut entries = HashMap::new();
-        
+
         let date1 = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
         let time1 = NaiveTime::from_hms_opt(12, 0, 0).unwrap();
         let entry1 = LogEntry::new(
