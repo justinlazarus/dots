@@ -86,6 +86,7 @@ fi
 #export NODE_EXTRA_CA_CERTS=/Users/jlazarus/costco-certs.pem
 #export SSL_CERT_FILE=/Users/jlazarus/costco-certs.pem
 REQUESTS_CA_BUNDLE=/Users/jlazarus/.ssh/cacert.pem
+export NODE_EXTRA_CA_CERTS="$HOME/work/certs/Certificates.pem"
 
 # =========================================
 # Aliases
