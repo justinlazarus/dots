@@ -69,9 +69,7 @@ pub struct AppState {
     pub day_search_query: String,
 
     // --- Tag State ---
-    // kept for future tag listing feature; currently unused
-    pub available_tags: Vec<(String, usize)>, // (tag, count) sorted by count desc
-    pub untagged_count: usize,
+    // (removed unused tag tracking fields)
 
     // --- UI State ---
     pub viewport_height: usize, // Track viewport height for page scrolling
@@ -93,8 +91,6 @@ impl AppState {
             search_query: String::new(),
             search_results: Vec::new(),
             day_search_query: String::new(),
-            available_tags: Vec::new(),
-            untagged_count: 0,
             viewport_height: 10, // Default, will be updated during render
             should_quit: false,
         }
