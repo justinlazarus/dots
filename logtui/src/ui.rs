@@ -310,11 +310,17 @@ pub fn render(f: &mut Frame, app: &mut AppState) {
     match &app.mode {
         AppMode::DailyView => render_daily_view(f, app),
         AppMode::EntryView(_) => render_entry_detail(f, app),
-        // SelectEntry and SearchView variants were removed. Only render the
-        // modes actively used by the app.
+        AppMode::SelectEntry => render_entry_selection(f, app),
         AppMode::DaySearchView => render_day_search_view(f, app),
         AppMode::ConfirmDelete(_) => {
-            render_entry_detail(f, app);
+            // If the confirm flow was initiated from the selection list,
+            // render the selection view underneath the modal; otherwise
+            // render the single-entry detail view.
+            if app.confirm_from_selection {
+                render_entry_selection(f, app);
+            } else {
+                render_entry_detail(f, app);
+            }
             render_confirm_modal(f, app);
         }
     }
@@ -690,6 +696,9 @@ fn render_footer(f: &mut Frame, area: Rect, app: &AppState) {
         AppMode::DailyView => {
             "[j/k] day  [^n/^p] month  [h/l] tag  [^d/^u] page  [Enter] open  [s/^s] search  [t] today  [i] add summary  [q] quit"
         }
+        AppMode::SelectEntry => {
+            "[j/k] navigate  [Enter] open  [n] new  [x] delete  [Esc] cancel"
+        }
         AppMode::EntryView(_) => {
             "[j/k] next/prev  [Enter] edit  [n] new  [x] delete  [Esc] back"
         }
@@ -751,7 +760,104 @@ fn render_day_search_view(f: &mut Frame, app: &mut AppState) {
     f.render_widget(search_input, search_area);
 }
 
-// Entry selection view removed.
+fn render_entry_selection(f: &mut Frame, app: &mut AppState) {
+    // Layout: header | content (summary + list) | footer
+    let vertical_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // Header
+            Constraint::Min(0),    // Content (split horizontally)
+            Constraint::Length(3), // Footer
+        ])
+        .split(f.size());
+
+    // Header
+    render_combined_header(f, vertical_chunks[0], app);
+
+    // Content row: summary (30%) | selection list (70%)
+    let content_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(30), Constraint::Percentage(70)])
+        .split(vertical_chunks[1]);
+
+    // Left: summary pane (keep it visible while selecting an entry)
+    render_summary_content(f, content_chunks[0], app);
+
+    // Right: selection list
+    let right_area = content_chunks[1];
+    let entries = app.get_filtered_entries();
+    if entries.is_empty() {
+        let no_entries = Paragraph::new("No entries for this day. Press n to create one.")
+            .style(Style::default().fg(Color::DarkGray))
+            .alignment(Alignment::Center)
+            .block(Block::default().borders(Borders::ALL));
+        f.render_widget(no_entries, right_area);
+    } else {
+        // Build list items using the same formatting as the daily entries
+        // so the preview (time, tag, markdown parsing) matches exactly.
+        let visible_width = right_area.width.saturating_sub(4) as usize; // account for borders/padding
+        let mut items: Vec<ListItem> = Vec::new();
+
+        for (idx, entry) in entries.iter().enumerate() {
+            let has_time = entry.time != chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+
+            // Build spans for this line following the same rules as render_entries
+            let mut spans_vec: Vec<Span<'static>> = Vec::new();
+
+            // Marker: show a gray bullet for the selected item, otherwise two spaces
+            let marker = if idx == app.selected_entry_index {
+                Span::styled("• ", Style::default().fg(Color::DarkGray))
+            } else {
+                Span::raw("  ")
+            };
+            // reserve marker width (2 columns)
+            spans_vec.push(marker);
+
+            // Time and tag formatting
+            if has_time {
+                spans_vec.push(Span::styled(
+                    format!("{} ", entry.time.format("%H:%M:%S")),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                ));
+
+                if let Some(ref tag) = entry.tag {
+                    spans_vec.push(Span::styled(
+                        format!("[{}] ", tag),
+                        Style::default().fg(Color::Cyan),
+                    ));
+                }
+            } else if let Some(ref tag) = entry.tag {
+                spans_vec.push(Span::styled(
+                    format!("[{}] ", tag),
+                    Style::default().fg(Color::Cyan),
+                ));
+            }
+
+            // Content preview (first line) parsed as markdown / highlighted
+            let first_content = entry.content.lines().next().unwrap_or("").trim();
+            let content_line: Line<'static> = if !app.day_search_query.is_empty() {
+                highlight_matches(first_content, &app.day_search_query)
+            } else {
+                parse_markdown_line(first_content)
+            };
+            for s in content_line.spans {
+                spans_vec.push(s);
+            }
+
+            // Truncate to fit visible width (subtract marker length already included)
+            let line = build_truncated_line(spans_vec, visible_width);
+            items.push(ListItem::new(line));
+        }
+
+        let list = List::new(items).block(Block::default().borders(Borders::ALL));
+        f.render_widget(list, right_area);
+    }
+
+    // Footer for selection view
+    render_footer(f, vertical_chunks[2], app);
+}
 
 fn render_entry_detail(f: &mut Frame, app: &mut AppState) {
     // Layout: header | content | footer
@@ -791,55 +897,75 @@ fn render_entry_detail(f: &mut Frame, app: &mut AppState) {
         let idx = app.selected_entry_index.min(entries.len() - 1);
         let entry = &entries[idx];
 
-        // Title indicates entry index
-        let title = format!("Entry {}/{}", idx + 1, entries.len());
-
-        let mut text = Text::default();
-
-        // Header: keep time and type (tag) on the top line, then leave two blank
-        // lines before rendering the full content. Location is shown after time
-        // in dim gray to keep context.
-        let mut top_header_spans: Vec<Span<'static>> = Vec::new();
+        // Build a title that mirrors the selection list preview: time, tag,
+        // and the first line of the content. We display that in the block
+        // title area and then render the rest of the entry body below it.
+        let first_line = entry.content.lines().next().unwrap_or("").trim();
         let has_time = entry.time != chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap();
 
+        let title_text = if has_time {
+            if let Some(ref tag) = entry.tag {
+                format!("{} [{}] {}", entry.time.format("%H:%M:%S"), tag, first_line)
+            } else {
+                format!("{} {}", entry.time.format("%H:%M:%S"), first_line)
+            }
+        } else if let Some(ref tag) = entry.tag {
+            format!("[{}] {}", tag, first_line)
+        } else if !first_line.is_empty() {
+            first_line.to_string()
+        } else {
+            entry.location.clone()
+        };
+
+        let mut text = Text::default();
+        // Render the body (skip the first line because it's already shown in the title).
+        let mut content_lines: Vec<&str> = entry.content.lines().skip(1).collect();
+        // Trim leading blank lines from the body (users may have left
+        // an empty line after the first line when editing).
+        if let Some(pos) = content_lines.iter().position(|s| !s.trim().is_empty()) {
+            content_lines = content_lines.into_iter().skip(pos).collect();
+        } else {
+            // All remaining lines are empty -> empty body
+            content_lines.clear();
+        }
+        for line in content_lines.iter() {
+            text.lines.push(parse_markdown_line(line));
+        }
+
+        // Build a styled title with left padding and colored time/tag to match
+        // the selection list formatting.
+        let mut title_spans: Vec<Span<'static>> = Vec::new();
+        // left padding (1 char)
+        title_spans.push(Span::raw(" "));
+
         if has_time {
-            top_header_spans.push(Span::styled(
+            title_spans.push(Span::styled(
                 format!("{}", entry.time.format("%H:%M:%S")),
                 Style::default()
                     .fg(Color::Yellow)
                     .add_modifier(Modifier::BOLD),
             ));
-
+            title_spans.push(Span::raw(" "));
             if let Some(ref tag) = entry.tag {
-                top_header_spans.push(Span::styled(
-                    format!(" [{}]", tag),
+                title_spans.push(Span::styled(
+                    format!("[{}] ", tag),
                     Style::default().fg(Color::Cyan),
                 ));
             }
         } else if let Some(ref tag) = entry.tag {
-            top_header_spans.push(Span::styled(
-                format!("[{}]", tag),
+            title_spans.push(Span::styled(
+                format!("[{}] ", tag),
                 Style::default().fg(Color::Cyan),
             ));
-        } else {
-            top_header_spans.push(Span::styled(
-                entry.location.clone(),
-                Style::default().fg(Color::Gray),
-            ));
         }
 
-        // Push the top header line
-        text.lines.push(Line::from(top_header_spans));
-
-        // Add two blank separator lines before the content
-        text.lines.push(Line::from(""));
-        text.lines.push(Line::from(""));
-
-        // Now render the full content, each line parsed as markdown
-        let content_lines: Vec<&str> = entry.content.lines().collect();
-        for line in content_lines.iter() {
-            text.lines.push(parse_markdown_line(line));
-        }
+        // Title content
+        title_spans.push(Span::styled(
+            first_line.to_string(),
+            Style::default().fg(Color::White),
+        ));
+        // trailing single space after title content
+        title_spans.push(Span::raw(" "));
 
         let paragraph = Paragraph::new(text)
             .wrap(Wrap { trim: false })
@@ -847,7 +973,7 @@ fn render_entry_detail(f: &mut Frame, app: &mut AppState) {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .title(title)
+                    .title(Line::from(title_spans))
                     .padding(ratatui::widgets::Padding::uniform(1)),
             );
 

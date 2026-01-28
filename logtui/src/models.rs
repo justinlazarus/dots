@@ -21,10 +21,8 @@ pub enum AppMode {
     // Removed QuickEntry/FullEntry/EditEntry — editor is invoked synchronously
     EntryView(usize),
     ConfirmDelete(usize),
-    // Removed unused selection/search modes to silence warnings — these views
-    // were previously implemented but are not constructed in the current
-    // application flow. Keep DaySearchView which is used for inline day
-    // highlighting.
+    SelectEntry,
+    // DaySearchView used for inline day highlighting
     DaySearchView,
 }
 
@@ -58,6 +56,18 @@ pub struct AppState {
     pub search_results: Vec<(NaiveDate, usize)>,
     pub day_search_query: String,
 
+    // Was the current EntryView opened from the SelectEntry list? When true,
+    // Esc from EntryView returns to SelectEntry instead of DailyView.
+    pub return_to_selection: bool,
+
+    // When a ConfirmDelete is requested from the SelectEntry mode this flag
+    // distinguishes that origin so the post-delete flow returns to the
+    // selection list instead of the entry view.
+    pub confirm_from_selection: bool,
+    /// When EntryView is opened from the selection list we save the index
+    /// that was selected so we can restore it when returning to the list.
+    pub prev_selected_entry_index: Option<usize>,
+
     // --- Tag State ---
     // (removed unused tag tracking fields)
 
@@ -81,6 +91,9 @@ impl AppState {
             search_query: String::new(),
             search_results: Vec::new(),
             day_search_query: String::new(),
+            return_to_selection: false,
+            confirm_from_selection: false,
+            prev_selected_entry_index: None,
             viewport_height: 10, // Default, will be updated during render
             should_quit: false,
         }

@@ -113,15 +113,65 @@ fn handle_key_event<B: ratatui::backend::Backend + Write>(
     match &app.mode {
         AppMode::DailyView => handle_daily_view_keys(app, key, modifiers, terminal),
         AppMode::EntryView(_) => handle_entry_view_keys(app, key, modifiers, terminal),
+        AppMode::SelectEntry => handle_select_entry_keys(app, key, modifiers, terminal),
         AppMode::ConfirmDelete(_) => handle_confirm_delete_keys(app, key, terminal),
-        // SelectEntry variant removed from AppMode; its handler is no longer
-        // reachable. Fall through to the default branch.
         // SearchView variant removed from AppMode; this branch should never
         // occur. Keep DaySearchView which is used.
         AppMode::DaySearchView => handle_day_search_keys(app, key),
         // All AppMode variants are handled explicitly; no-op for unexpected
         _ => Ok(()),
     }
+}
+
+fn handle_select_entry_keys<B: ratatui::backend::Backend + Write>(
+    app: &mut AppState,
+    key: KeyCode,
+    _modifiers: event::KeyModifiers,
+    terminal: &mut Terminal<B>,
+) -> Result<()> {
+    let entries_len = app.get_filtered_entries().len();
+
+    match key {
+        KeyCode::Char('j') | KeyCode::Down => {
+            if entries_len > 0 && app.selected_entry_index + 1 < entries_len {
+                app.selected_entry_index += 1;
+            }
+        }
+        KeyCode::Char('k') | KeyCode::Up => {
+            if app.selected_entry_index > 0 {
+                app.selected_entry_index -= 1;
+            }
+        }
+        KeyCode::Enter => {
+            // Open selected entry in detail view. Mark that EntryView was
+            // entered from the selection list so Esc returns here. Also set
+            // return_to_selection so entry-navigation is disabled while in
+            // this focused single-entry view.
+            app.mode = AppMode::EntryView(app.selected_entry_index);
+            app.return_to_selection = true;
+            // remember which index we came from
+            app.prev_selected_entry_index = Some(app.selected_entry_index);
+        }
+        KeyCode::Char('n') => {
+            // Create new entry, then return to selection list and select last
+            handle_create_new_entry(app, terminal)?;
+            app.entries = app.db.get_entries_for_date(app.current_date)?;
+            if !app.entries.is_empty() {
+                app.selected_entry_index = app.entries.len() - 1;
+            }
+            app.mode = AppMode::SelectEntry;
+        }
+        KeyCode::Char('x') => {
+            // Request delete for currently selected index and remember origin
+            app.confirm_from_selection = true;
+            app.mode = AppMode::ConfirmDelete(app.selected_entry_index);
+        }
+        KeyCode::Esc => {
+            app.mode = AppMode::DailyView;
+        }
+        _ => {}
+    }
+    Ok(())
 }
 
 fn handle_daily_view_keys<B: ratatui::backend::Backend + Write>(
@@ -247,13 +297,16 @@ fn handle_daily_view_keys<B: ratatui::backend::Backend + Write>(
             resume_tui(terminal)?;
         }
         KeyCode::Enter => {
-            // Enter: open detail entry view for this date or create new if none
+            // Enter: open selection list for this date (if entries exist),
+            // otherwise create a new entry. Selection list lets user pick which
+            // entry to view when a day has multiple logs.
             app.entries = app.db.get_entries_for_date(app.current_date)?;
             if app.entries.is_empty() {
                 handle_create_new_entry(app, terminal)?;
             } else {
                 app.selected_entry_index = 0;
-                app.mode = AppMode::EntryView(0);
+                app.prev_selected_entry_index = Some(app.selected_entry_index);
+                app.mode = AppMode::SelectEntry;
             }
         }
         KeyCode::Char('/') => {
@@ -383,14 +436,25 @@ fn handle_entry_view_keys<B: ratatui::backend::Backend + Write>(
 ) -> Result<()> {
     match key {
         KeyCode::Char('j') | KeyCode::Down => {
-            let max = app.entries.len();
-            if max > 0 && app.selected_entry_index + 1 < max {
-                app.selected_entry_index += 1;
+            // When this EntryView was opened from the selection list we
+            // intentionally disable next/prev navigation so the user only
+            // sees the selected log. Otherwise allow normal navigation.
+            if app.return_to_selection {
+                // noop
+            } else {
+                let max = app.entries.len();
+                if max > 0 && app.selected_entry_index + 1 < max {
+                    app.selected_entry_index += 1;
+                }
             }
         }
         KeyCode::Char('k') | KeyCode::Up => {
-            if app.selected_entry_index > 0 {
-                app.selected_entry_index -= 1;
+            if app.return_to_selection {
+                // noop
+            } else {
+                if app.selected_entry_index > 0 {
+                    app.selected_entry_index -= 1;
+                }
             }
         }
         KeyCode::Enter => {
@@ -414,7 +478,17 @@ fn handle_entry_view_keys<B: ratatui::backend::Backend + Write>(
             app.mode = AppMode::ConfirmDelete(idx);
         }
         KeyCode::Esc => {
-            app.mode = AppMode::DailyView;
+            if app.return_to_selection {
+                // Return back to the selection list that opened this view
+                app.mode = AppMode::SelectEntry;
+                // restore the previously-selected index if available
+                if let Some(idx) = app.prev_selected_entry_index.take() {
+                    app.selected_entry_index = idx.min(app.entries.len().saturating_sub(1));
+                }
+                app.return_to_selection = false;
+            } else {
+                app.mode = AppMode::DailyView;
+            }
         }
         KeyCode::Char('d') if modifiers.contains(event::KeyModifiers::CONTROL) => {
             // Ctrl+d: Scroll down one page
@@ -453,16 +527,28 @@ fn handle_confirm_delete_keys<B: ratatui::backend::Backend + Write>(
             }
             // Refresh entries and clamp
             app.entries = app.db.get_entries_for_date(app.current_date)?;
+
             if app.entries.is_empty() {
                 app.mode = AppMode::DailyView;
             } else {
                 app.selected_entry_index = idx.min(app.entries.len() - 1);
-                app.mode = AppMode::EntryView(app.selected_entry_index);
+                // If deletion originated from the selection list, return there;
+                // otherwise return to entry view at the clamped index.
+                if app.confirm_from_selection {
+                    app.mode = AppMode::SelectEntry;
+                    app.confirm_from_selection = false;
+                } else {
+                    app.mode = AppMode::EntryView(app.selected_entry_index);
+                }
             }
         }
         KeyCode::Char('n') | KeyCode::Esc => {
             // Cancel
-            if let AppMode::ConfirmDelete(idx) = app.mode {
+            if app.confirm_from_selection {
+                // Return to selection list preserving index
+                app.mode = AppMode::SelectEntry;
+                app.confirm_from_selection = false;
+            } else if let AppMode::ConfirmDelete(idx) = app.mode {
                 app.mode = AppMode::EntryView(idx);
             } else {
                 app.mode = AppMode::DailyView;
@@ -574,10 +660,28 @@ fn handle_edit_entry<B: ratatui::backend::Backend + Write>(
 
             // Update in database
             app.db.update_entry(&updated_entry)?;
+            // Refresh entries for current date. If the edited entry changed
+            // date such that it no longer belongs to the current_date, fall
+            // back to DailyView; otherwise keep EntryView and preserve
+            // return_to_selection semantics.
             app.entries = app.db.get_entries_for_date(app.current_date)?;
+            let still_present = app.entries.iter().any(|e| e.id == updated_entry.id);
+            if !still_present {
+                app.mode = AppMode::DailyView;
+                app.return_to_selection = false;
+            } else {
+                // Keep entry view focused on the updated entry
+                let pos = app
+                    .entries
+                    .iter()
+                    .position(|e| e.id == updated_entry.id)
+                    .unwrap_or(0);
+                app.selected_entry_index = pos;
+                app.mode = AppMode::EntryView(pos);
+            }
         }
-
-        app.mode = AppMode::DailyView;
+        // If nothing changed or after processing, ensure we clear the
+        // temporary editor suspension state and restore TUI.
         resume_tui(terminal)?;
     }
     Ok(())
