@@ -207,40 +207,11 @@ fn render_combined_header(f: &mut Frame, area: Rect, app: &AppState) {
     let month_name = app.current_date.format("%B").to_string(); // Full month name
     let date_str = app.current_date.format("%Y-%m-%d %A").to_string();
 
-    // Build tag indicator string
-    let mut tag_parts = Vec::new();
-
-    // Add "all" at the beginning
-    let total_count: usize =
-        app.available_tags.iter().map(|(_, c)| c).sum::<usize>() + app.untagged_count;
-    if matches!(app.current_tag_filter, crate::models::TagFilter::All) {
-        tag_parts.push(format!("[all: {}]", total_count));
-    } else {
-        tag_parts.push(format!("all: {}", total_count));
-    }
-
-    // Add each tag with count
-    for (tag, count) in &app.available_tags {
-        if matches!(app.current_tag_filter, crate::models::TagFilter::Tag(ref t) if t == tag) {
-            tag_parts.push(format!("[{}: {}]", tag, count));
-        } else {
-            tag_parts.push(format!("{}: {}", tag, count));
-        }
-    }
-
-    // Add untagged if present
-    if app.untagged_count > 0 {
-        if matches!(app.current_tag_filter, crate::models::TagFilter::Untagged) {
-            tag_parts.push(format!("[untagged: {}]", app.untagged_count));
-        } else {
-            tag_parts.push(format!("untagged: {}", app.untagged_count));
-        }
-    }
-
-    let tag_indicator = if tag_parts.is_empty() {
-        String::new()
-    } else {
-        format!("  {}", tag_parts.join(" "))
+    // Show current tag filter
+    let tag_indicator = match &app.current_tag_filter {
+        crate::models::TagFilter::All => String::new(),
+        crate::models::TagFilter::Tag(tag) => format!("  [#{}]", tag),
+        crate::models::TagFilter::Untagged => "  [untagged]".to_string(),
     };
 
     // Combine: "January  2026-01-26 Sunday  tags..."
@@ -262,7 +233,7 @@ fn render_entries(f: &mut Frame, area: Rect, app: &mut AppState) {
     // Update viewport height for page scrolling (subtract borders and padding)
     app.viewport_height = area.height.saturating_sub(4) as usize; // 2 for borders, 2 for padding
 
-    let entries = app.get_filtered_entries_for_date(&app.current_date);
+    let entries = app.get_filtered_entries();
 
     if entries.is_empty() {
         let msg = match &app.current_tag_filter {
@@ -402,7 +373,7 @@ fn render_entries(f: &mut Frame, area: Rect, app: &mut AppState) {
 
     // Calculate page info
     let current_page = if app.viewport_height > 0 {
-        (app.scroll_offset / app.viewport_height) + 1
+        ((app.scroll_offset as usize) / app.viewport_height) + 1
     } else {
         1
     };
@@ -685,7 +656,7 @@ fn render_entry_selection(f: &mut Frame, app: &AppState) {
     f.render_widget(header, chunks[0]);
 
     // Entry list - add "+ New Entry" as first item
-    let entries = app.get_entries_for_date(&app.current_date);
+    let entries = &app.entries;
     let mut items: Vec<ListItem> = Vec::new();
 
     // First item: "+ New Entry"
@@ -760,7 +731,7 @@ fn render_search_view(f: &mut Frame, app: &AppState) {
             .iter()
             .enumerate()
             .map(|(idx, (date, entry_idx))| {
-                let entries = app.get_entries_for_date(date);
+                let entries = app.db.get_entries_for_date(*date).unwrap_or_default();
                 if let Some(entry) = entries.get(*entry_idx) {
                     let preview = entry.content.lines().next().unwrap_or("");
                     let content = format!(
