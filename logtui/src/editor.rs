@@ -289,25 +289,44 @@ fn parse_yaml_frontmatter(
     let mut tag: Option<String> = None;
     let mut title: Option<String> = None;
 
+    // Helper to remove surrounding quotes and unescape common sequences
+    fn unquote_value(v: &str) -> String {
+        let s = v.trim();
+        if s.len() >= 2 && s.starts_with('"') && s.ends_with('"') {
+            // Remove surrounding double quotes and unescape \ and \"
+            let inner = &s[1..s.len() - 1];
+            let unescaped = inner.replace("\\\\", "\\").replace("\\\"", "\"");
+            return unescaped;
+        }
+        if s.len() >= 2 && s.starts_with('\'') && s.ends_with('\'') {
+            // YAML single-quote style: two single-quotes represent one
+            let inner = &s[1..s.len() - 1];
+            let unescaped = inner.replace("''", "'");
+            return unescaped;
+        }
+        s.to_string()
+    }
+
     for line in &lines[start_idx + 1..end_idx] {
         if let Some(colon_pos) = line.find(':') {
             let key = line[..colon_pos].trim();
             let value = line[colon_pos + 1..].trim();
+            let v = unquote_value(value);
 
             match key {
                 // Accept location even if empty string
                 "location" => {
-                    location = Some(value.to_string());
+                    location = Some(v.clone());
                 }
                 "tag" => {
-                    if !value.is_empty() {
-                        tag = Some(value.to_string());
+                    if !v.is_empty() {
+                        tag = Some(v.clone());
                     }
                 }
                 "title" => {
                     // Allow empty title -> treat as None
-                    if !value.is_empty() {
-                        title = Some(value.to_string());
+                    if !v.is_empty() {
+                        title = Some(v.clone());
                     }
                 }
                 "date" | "time" => {

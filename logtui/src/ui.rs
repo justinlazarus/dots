@@ -205,6 +205,40 @@ fn parse_markdown_line(line: &str) -> Line<'static> {
     }
 }
 
+/// Parse multiple markdown lines and handle fenced code blocks (```)
+/// Returns a Vec<Line> where code-block lines are rendered with a distinct style.
+fn parse_markdown_lines(lines: &[&str]) -> Vec<Line<'static>> {
+    let mut out: Vec<Line<'static>> = Vec::new();
+    let mut in_code = false;
+    // optional language after opening fence (ignored for now)
+    for raw in lines.iter() {
+        let s = *raw;
+        let trimmed = s.trim_start();
+        if trimmed.starts_with("```") {
+            // toggle fenced code block state
+            in_code = !in_code;
+            continue; // do not render the fence itself
+        }
+
+        if in_code {
+            // Render code line with an indented, dimmed green style to set it
+            // apart from normal text. We prefix with two spaces for readability.
+            let code_span = Span::styled(
+                format!("  {}", s),
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::DIM),
+            );
+            out.push(Line::from(vec![code_span]));
+        } else {
+            out.push(parse_markdown_line(s));
+        }
+    }
+
+    // If the file ended while still in a code block, we just stop — this is fine.
+    out
+}
+
 /// Build a Line from spans truncated to max_width terminal columns. Uses
 /// unicode-width to respect fullwidth characters and emojis.
 fn build_truncated_line(spans: Vec<Span<'static>>, max_width: usize) -> Line<'static> {
@@ -624,22 +658,18 @@ fn render_summary_content(f: &mut Frame, area: Rect, app: &AppState) {
     let current_month = app.current_date.month();
     let current_year = app.current_date.year();
 
-    // Split the area into: date column + vertical separator (1) + summary text
-    // Date column needs: 1 (padding left) + 2 (DD) + 1 (space) + 2 (Dy) + 1 (padding right) = 7 + 2 borders = 9
-    let date_width = 9;
+    // Split the area into: date column + summary text. We no longer render a
+    // dedicated vertical separator column; the date column includes right
+    // padding so the summary text doesn't butt directly against it.
+    let date_width = 10;
 
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Length(date_width), // Date column with padding
-            Constraint::Length(1),          // Vertical separator
-            Constraint::Min(0),             // Summary text
-        ])
+        .constraints([Constraint::Length(date_width), Constraint::Min(0)])
         .split(area);
 
     let date_area = chunks[0];
-    let separator_area = chunks[1];
-    let summary_area = chunks[2];
+    let summary_area = chunks[1];
 
     // Calculate available width for summary text
     let content_width = (summary_area.width as usize).saturating_sub(2); // minus borders
@@ -667,8 +697,10 @@ fn render_summary_content(f: &mut Frame, area: Rect, app: &AppState) {
                 .take(2)
                 .collect::<String>();
 
-            // Date column: "DD Dy" (padding will add space on left and right)
-            let date_text = format!("{:02} {}", day, day_abbr);
+            // Date column: "DD Dy " (padding will add space on left and right)
+            // include an extra trailing space after the DOW so it doesn't run
+            // directly into the summary column.
+            let date_text = format!("{:02} {} ", day, day_abbr);
             let date_style = if is_current {
                 Style::default()
                     .fg(Color::Yellow)
@@ -786,10 +818,6 @@ fn render_summary_content(f: &mut Frame, area: Rect, app: &AppState) {
         )
         .scroll((0, 0));
     f.render_widget(date_paragraph, date_area);
-
-    // Render vertical separator (using default border color)
-    let separator = Block::default().borders(Borders::LEFT | Borders::TOP | Borders::BOTTOM);
-    f.render_widget(separator, separator_area);
 
     // Render summary column with padding
     let summary_paragraph = Paragraph::new(summary_lines)
@@ -1039,8 +1067,13 @@ fn render_entry_detail(f: &mut Frame, app: &mut AppState) {
             // All remaining lines are empty -> empty body
             content_lines.clear();
         }
-        for line in content_lines.iter() {
-            text.lines.push(parse_markdown_line(line));
+        // Use parse_markdown_lines so fenced code blocks (```...```) are
+        // handled across multiple lines instead of parsing each line
+        // independently. This ensures code fences toggle correctly and
+        // code lines receive the code styling.
+        let parsed = parse_markdown_lines(&content_lines);
+        for l in parsed.into_iter() {
+            text.lines.push(l);
         }
 
         // Build a styled title with left padding and colored time/tag to match
