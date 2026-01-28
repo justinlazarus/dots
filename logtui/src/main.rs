@@ -30,8 +30,8 @@ fn main() -> Result<()> {
     // Fetch initial entries for today from DB
     let initial_entries = database.get_entries_for_date(today)?;
 
-    // Load summaries from DB (migrated from markdown if necessary)
-    let mut app = AppState::new(database, db_path, today.year(), initial_entries);
+    // Initialize application state
+    let mut app = AppState::new(database, initial_entries);
 
     // If summaries.md exists, parse and write into DB (one-time migration)
     let summary_path = PathBuf::from("summaries.md");
@@ -453,15 +453,8 @@ fn handle_confirm_delete_keys<B: ratatui::backend::Backend + Write>(
     Ok(())
 }
 
-fn handle_edit_or_create_entry<B: ratatui::backend::Backend + Write>(
-    app: &mut AppState,
-    _terminal: &mut Terminal<B>,
-) -> Result<()> {
-    // Always show selection menu with "+ New Entry" option at top
-    app.selected_entry_index = 0;
-    app.mode = AppMode::SelectEntry;
-    Ok(())
-}
+// Removed unused helper `handle_edit_or_create_entry` — selection flow
+// is driven directly by key handlers. Deleting it reduces warnings.
 
 fn handle_create_new_entry<B: ratatui::backend::Backend + Write>(
     app: &mut AppState,

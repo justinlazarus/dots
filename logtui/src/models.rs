@@ -2,7 +2,6 @@ use crate::db::Database; // New import
 use crate::summary::MonthlySummaries;
 use anyhow::Result;
 use chrono::{NaiveDate, NaiveTime};
-use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 pub struct LogEntry {
@@ -57,10 +56,6 @@ pub struct AppState {
     // --- Database Handle ---
     pub db: Database,
 
-    // --- File Paths ---
-    pub log_file_path: PathBuf,
-    pub year: i32,
-
     // --- Current View State ---
     pub current_date: NaiveDate,
     /// Now only holds entries for the *currently viewed* day
@@ -90,16 +85,9 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(
-        db: Database,
-        log_file_path: PathBuf,
-        year: i32,
-        initial_entries: Vec<LogEntry>,
-    ) -> Self {
+    pub fn new(db: Database, initial_entries: Vec<LogEntry>) -> Self {
         Self {
             db,
-            log_file_path,
-            year,
             current_date: chrono::Local::now().date_naive(),
             entries: initial_entries,
             monthly_summaries: MonthlySummaries::new(),
