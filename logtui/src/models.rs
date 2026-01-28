@@ -113,7 +113,9 @@ impl AppState {
             last_rendered_links: Vec::new(),
             last_rendered_link_positions: Vec::new(),
             last_detail_area: None,
-            mouse_passthrough_enabled: false,
+            // We never enable mouse capture; leave passthrough enabled so the
+            // terminal emulator handles mouse selection and clicks.
+            mouse_passthrough_enabled: true,
         }
     }
 

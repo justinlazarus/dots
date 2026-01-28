@@ -8,8 +8,7 @@ mod ui;
 use anyhow::{Context, Result};
 use chrono::{Datelike, Local};
 use crossterm::event::{
-    self, DisableMouseCapture, EnableMouseCapture, Event as CEvent, KeyCode, MouseButton,
-    MouseEventKind,
+    self, DisableMouseCapture, Event as CEvent, KeyCode, MouseButton, MouseEventKind,
 };
 use crossterm::{
     execute,
@@ -59,7 +58,9 @@ fn main() -> Result<()> {
     // 3. Setup Terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    // Do not enable mouse capture: leave mouse events with the terminal
+    // emulator/browser so native selection and OSC-8 link clicks work.
+    execute!(stdout, EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
@@ -95,44 +96,11 @@ fn run_app<B: ratatui::backend::Backend + Write>(
                 }
                 handle_key_event(app, key.code, key.modifiers, terminal)?;
             }
-            CEvent::Mouse(mouse) => {
-                // Only handle mouse clicks when in EntryView (detail) mode
-                if let crate::models::AppMode::EntryView(_) = app.mode {
-                    // Map mouse click to link positions recorded during render
-                    if mouse.kind == crossterm::event::MouseEventKind::Down(MouseButton::Left) {
-                        // Check recorded positions
-                        for (idx, row, start_col, end_col) in
-                            app.last_rendered_link_positions.iter()
-                        {
-                            if mouse.row == *row
-                                && mouse.column >= *start_col
-                                && mouse.column <= *end_col
-                            {
-                                // Found a link — open it like numeric handler
-                                if let Some(url) = app.last_rendered_links.get(*idx) {
-                                    suspend_tui(terminal)?;
-                                    let opener = if cfg!(target_os = "macos") {
-                                        "open"
-                                    } else if cfg!(target_os = "windows") {
-                                        "cmd"
-                                    } else {
-                                        "xdg-open"
-                                    };
-                                    if cfg!(target_os = "windows") {
-                                        let _ = Command::new(opener)
-                                            .arg("/C")
-                                            .arg("start")
-                                            .arg(url)
-                                            .spawn();
-                                    } else {
-                                        let _ = Command::new(opener).arg(url).spawn();
-                                    }
-                                    resume_tui(terminal)?;
-                                }
-                            }
-                        }
-                    }
-                }
+            CEvent::Mouse(_mouse) => {
+                // Ignore mouse events in the app — let the terminal emulator
+                // (Ghostty/browser) handle selection and clicks. We rely on
+                // OSC-8 hyperlinks for clickable links and numeric keys as
+                // keyboard fallback.
             }
             _ => {}
         }
@@ -800,11 +768,7 @@ fn suspend_tui<B: ratatui::backend::Backend + Write>(terminal: &mut Terminal<B>)
 
 fn resume_tui<B: ratatui::backend::Backend + Write>(terminal: &mut Terminal<B>) -> Result<()> {
     enable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        EnterAlternateScreen,
-        EnableMouseCapture
-    )?;
+    execute!(terminal.backend_mut(), EnterAlternateScreen)?;
     terminal.hide_cursor()?;
     terminal.clear()?;
     Ok(())
