@@ -117,7 +117,8 @@ fn handle_key_event<B: ratatui::backend::Backend + Write>(
         AppMode::SelectEntry => handle_select_entry_keys(app, key, terminal),
         AppMode::SearchView => handle_search_keys(app, key, modifiers),
         AppMode::DaySearchView => handle_day_search_keys(app, key),
-        _ => Ok(()), // external editor modes don't accept key events
+        // All AppMode variants are handled explicitly; no-op for unexpected
+        _ => Ok(()),
     }
 }
 

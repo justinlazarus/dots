@@ -14,13 +14,8 @@ pub struct LogEntry {
 }
 
 impl LogEntry {
-    pub fn new(
-        date: NaiveDate,
-        time: NaiveTime,
-        // day_of_week removed; compute from date when needed
-        location: String,
-        content: String,
-    ) -> Self {
+    // Keep a simple constructor if callers want to create a minimal entry.
+    pub fn new(date: NaiveDate, time: NaiveTime, location: String, content: String) -> Self {
         Self {
             id: ulid::Ulid::new().to_string(),
             date,
@@ -35,9 +30,7 @@ impl LogEntry {
 #[derive(Debug, Clone, PartialEq)]
 pub enum AppMode {
     DailyView,
-    QuickEntry,
-    FullEntry,
-    EditEntry(usize),
+    // Removed QuickEntry/FullEntry/EditEntry — editor is invoked synchronously
     EntryView(usize),
     ConfirmDelete(usize),
     SelectEntry,
@@ -76,6 +69,7 @@ pub struct AppState {
     pub day_search_query: String,
 
     // --- Tag State ---
+    // kept for future tag listing feature; currently unused
     pub available_tags: Vec<(String, usize)>, // (tag, count) sorted by count desc
     pub untagged_count: usize,
 

@@ -300,10 +300,6 @@ pub fn render(f: &mut Frame, app: &mut AppState) {
             render_entry_detail(f, app);
             render_confirm_modal(f, app);
         }
-        AppMode::QuickEntry | AppMode::FullEntry | AppMode::EditEntry(_) => {
-            // External editor is running, render daily view underneath
-            render_daily_view(f, app)
-        }
     }
 }
 
@@ -1012,7 +1008,7 @@ fn render_entry_detail(f: &mut Frame, app: &mut AppState) {
     f.render_widget(footer, vertical_chunks[2]);
 }
 
-fn render_confirm_modal(f: &mut Frame, app: &AppState) {
+fn render_confirm_modal(f: &mut Frame, _app: &AppState) {
     // Centered small modal
     let area = f.size();
     let w = 50.min(area.width.saturating_sub(4));

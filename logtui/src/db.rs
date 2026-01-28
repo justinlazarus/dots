@@ -84,18 +84,7 @@ impl Database {
         Ok(Self { conn })
     }
 
-    pub fn get_summary(&self, date: NaiveDate) -> Result<Option<String>> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT text FROM summaries WHERE date = ?1")?;
-        let mut rows = stmt.query([date.to_string()])?;
-        if let Some(row) = rows.next()? {
-            let text: String = row.get(0)?;
-            Ok(Some(text))
-        } else {
-            Ok(None)
-        }
-    }
+    // get_summary removed — summaries are accessed via get_all_summaries or set_summary
 
     pub fn set_summary(&self, date: NaiveDate, text: &str) -> Result<()> {
         if text.trim().is_empty() {

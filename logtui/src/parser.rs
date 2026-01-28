@@ -71,8 +71,14 @@ pub fn parse_log_file(content: &str, year: i32) -> Result<HashMap<NaiveDate, Vec
             let content = content_lines.join("\n").trim().to_string();
 
             // Create entry (day_of_week removed from LogEntry; compute from date when needed)
-            let mut entry = LogEntry::new(date, time, location, content);
-            entry.tag = tag;
+            let mut entry = LogEntry {
+                id: ulid::Ulid::new().to_string(),
+                date,
+                time,
+                location,
+                tag,
+                content,
+            };
 
             // Add to entries map
             entries.entry(date).or_insert_with(Vec::new).push(entry);
@@ -238,13 +244,14 @@ This is a test entry.
         let date = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
         let time = NaiveTime::from_hms_opt(12, 31, 14).unwrap();
 
-        let entry = LogEntry::new(
+        let entry = LogEntry {
+            id: ulid::Ulid::new().to_string(),
             date,
             time,
-            "Thursday".to_string(),
-            "Rancho Mirage, CA".to_string(),
-            "This is a test entry.".to_string(),
-        );
+            location: "Rancho Mirage, CA".to_string(),
+            tag: None,
+            content: "This is a test entry.".to_string(),
+        };
 
         entries.insert(date, vec![entry]);
 
