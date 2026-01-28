@@ -402,6 +402,8 @@ fn render_combined_header(f: &mut Frame, area: Rect, app: &AppState) {
     let date_and_tag = format!("{}{}", date_str, tag_indicator);
     let date_w = date_and_tag.width();
     let mode_w = mode_label.width();
+    // when rendering as a pill we add one space padding on each side
+    let pill_mode_w = mode_w + 2;
 
     // Compute spacing to place date centered and mode right-aligned within content_width
     let date_start = if content_width > date_w {
@@ -416,8 +418,8 @@ fn render_combined_header(f: &mut Frame, area: Rect, app: &AppState) {
     } else {
         1
     };
-    let mut mode_start = if content_width > mode_w {
-        content_width - mode_w
+    let mut mode_start = if content_width > pill_mode_w {
+        content_width - pill_mode_w
     } else {
         0
     };
@@ -454,11 +456,12 @@ fn render_combined_header(f: &mut Frame, area: Rect, app: &AppState) {
             .add_modifier(Modifier::BOLD),
     ));
     spans.push(Span::raw(" ".repeat(right_space)));
-    // mode marker: bright green for visibility
+    // mode marker: render as a bright green pill (bg green + black text)
     spans.push(Span::styled(
-        mode_label,
+        format!(" {} ", mode_label),
         Style::default()
-            .fg(Color::LightGreen)
+            .bg(Color::Green)
+            .fg(Color::Black)
             .add_modifier(Modifier::BOLD),
     ));
     // right padding
@@ -494,7 +497,8 @@ fn render_entries(f: &mut Frame, area: Rect, app: &mut AppState) {
     // Build a single-line preview for each entry and add to text (one line per entry)
     let mut text = Text::default();
     let visible_width = area.width.saturating_sub(4) as usize; // account for borders/padding
-    for entry in entries.iter() {
+    let highlight_entries = matches!(app.mode, AppMode::SelectEntry | AppMode::EntryView(_));
+    for (idx, entry) in entries.iter().enumerate() {
         // Determine presence of time and tag
         let has_time = entry.time != chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap();
         let has_tag = entry.tag.as_ref().map(|s| !s.is_empty()).unwrap_or(false);
@@ -521,12 +525,18 @@ fn render_entries(f: &mut Frame, area: Rect, app: &mut AppState) {
         };
 
         if has_time && has_tag && !preview_text.is_empty() {
-            // Time (yellow bold)
-            spans_vec.push(Span::styled(
-                format!("{} ", entry.time.format("%H:%M:%S")),
+            // Time: highlight only when selection mode is active AND this item is selected
+            let time_style = if highlight_entries && idx == app.selected_entry_index {
                 Style::default()
                     .fg(Color::Yellow)
-                    .add_modifier(Modifier::BOLD),
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(Color::White)
+            };
+
+            spans_vec.push(Span::styled(
+                format!("{} ", entry.time.format("%H:%M:%S")),
+                time_style,
             ));
 
             // Tag (cyan)
@@ -658,7 +668,16 @@ fn render_summary_content(f: &mut Frame, area: Rect, app: &AppState) {
             } else {
                 Style::default()
             };
-            date_lines.push(Line::from(vec![Span::styled(date_text, date_style)]));
+            // Prepend selector glyph for the currently selected date so it matches
+            // the entry selection list marker. Reserve two columns for the marker.
+            let mut date_spans: Vec<Span<'static>> = Vec::new();
+            if is_current {
+                date_spans.push(Span::styled("❯ ", Style::default().fg(Color::DarkGray)));
+            } else {
+                date_spans.push(Span::raw("  "));
+            }
+            date_spans.push(Span::styled(date_text, date_style));
+            date_lines.push(Line::from(date_spans));
 
             // Summary column - collect all lines for this day first
             let mut day_summary_lines: Vec<Line> = Vec::new();
@@ -899,11 +918,19 @@ fn render_entry_selection(f: &mut Frame, app: &mut AppState) {
 
             // Time and tag formatting
             if has_time {
-                spans_vec.push(Span::styled(
-                    format!("{} ", entry.time.format("%H:%M:%S")),
+                // Highlight time only for the currently selected entry to match
+                // the date selection pane (selected -> yellow bold).
+                let time_style = if idx == app.selected_entry_index {
                     Style::default()
                         .fg(Color::Yellow)
-                        .add_modifier(Modifier::BOLD),
+                        .add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default().fg(Color::White)
+                };
+
+                spans_vec.push(Span::styled(
+                    format!("{} ", entry.time.format("%H:%M:%S")),
+                    time_style,
                 ));
 
                 if let Some(ref tag) = entry.tag {
@@ -1065,8 +1092,31 @@ fn render_entry_detail(f: &mut Frame, app: &mut AppState) {
 fn render_confirm_modal(f: &mut Frame, _app: &AppState) {
     // Centered small modal
     let area = f.size();
-    let w = 50.min(area.width.saturating_sub(4));
-    let h = 5u16.min(area.height.saturating_sub(4));
+    // Message to show in modal
+    let msg = "Delete this entry? Press y to confirm or n/Esc to cancel";
+
+    // Compute desired width based on message length, but clamp to available space
+    let max_w = area.width.saturating_sub(4); // leave some margin from terminal edges
+                                              // desired inner content width: message width + a little padding
+    let msg_w = msg.width();
+    let desired_w = (msg_w + 6) as u16; // padding + borders
+    let w = desired_w.min(max_w as u16).max(20); // minimum width of 20
+
+    // Available content width inside the modal (subtract borders and padding)
+    let content_w = if w > 4 { (w - 4) as usize } else { 1 };
+
+    // Compute how many wrapped lines message will need
+    let lines_needed = if content_w > 0 {
+        ((msg_w + content_w - 1) / content_w) as u16
+    } else {
+        1u16
+    };
+
+    // Height: title + message lines + padding (clamped)
+    let desired_h = lines_needed.saturating_add(3); // title + padding
+    let max_h = area.height.saturating_sub(4) as u16;
+    let h = desired_h.min(max_h).max(3);
+
     let x = (area.width.saturating_sub(w)) / 2;
     let y = (area.height.saturating_sub(h)) / 2;
     let rect = Rect::new(x, y, w, h);
@@ -1076,9 +1126,10 @@ fn render_confirm_modal(f: &mut Frame, _app: &AppState) {
         .title("Confirm Delete")
         .style(Style::default().fg(Color::Red));
 
-    let text = Paragraph::new("Delete this entry? Press y to confirm or n/Esc to cancel")
+    let text = Paragraph::new(msg)
         .style(Style::default().fg(Color::White))
         .alignment(Alignment::Center)
+        .wrap(Wrap { trim: true })
         .block(block);
 
     f.render_widget(text, rect);
