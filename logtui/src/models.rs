@@ -13,19 +13,7 @@ pub struct LogEntry {
     pub content: String,
 }
 
-impl LogEntry {
-    // Keep a simple constructor if callers want to create a minimal entry.
-    pub fn new(date: NaiveDate, time: NaiveTime, location: String, content: String) -> Self {
-        Self {
-            id: ulid::Ulid::new().to_string(),
-            date,
-            time,
-            location,
-            tag: None,
-            content,
-        }
-    }
-}
+impl LogEntry {}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AppMode {
@@ -33,8 +21,10 @@ pub enum AppMode {
     // Removed QuickEntry/FullEntry/EditEntry — editor is invoked synchronously
     EntryView(usize),
     ConfirmDelete(usize),
-    SelectEntry,
-    SearchView,
+    // Removed unused selection/search modes to silence warnings — these views
+    // were previously implemented but are not constructed in the current
+    // application flow. Keep DaySearchView which is used for inline day
+    // highlighting.
     DaySearchView,
 }
 

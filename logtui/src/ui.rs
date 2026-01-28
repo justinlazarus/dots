@@ -7,6 +7,7 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
 };
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 /// Parse a markdown line and return styled spans
 fn parse_markdown_line(line: &str) -> Line<'static> {
@@ -194,7 +195,8 @@ fn parse_markdown_line(line: &str) -> Line<'static> {
     }
 }
 
-/// Build a Line from spans truncated to max_width characters. If truncated, append '...'.
+/// Build a Line from spans truncated to max_width terminal columns. Uses
+/// unicode-width to respect fullwidth characters and emojis.
 fn build_truncated_line(spans: Vec<Span<'static>>, max_width: usize) -> Line<'static> {
     if max_width == 0 {
         return Line::from("");
@@ -203,15 +205,30 @@ fn build_truncated_line(spans: Vec<Span<'static>>, max_width: usize) -> Line<'st
     let mut out: Vec<Span<'static>> = Vec::new();
     let mut used: usize = 0;
     let ell = "...";
-    let ell_len = ell.chars().count();
+    let ell_len = ell.width();
+
+    // helper: take as many chars from `s` as fit into `limit` columns
+    fn take_by_width(s: &str, limit: usize) -> String {
+        let mut acc = 0usize;
+        let mut out = String::new();
+        for ch in s.chars() {
+            let w = ch.width().unwrap_or(0);
+            if acc + w > limit {
+                break;
+            }
+            out.push(ch);
+            acc += w;
+        }
+        out
+    }
 
     for span in spans.into_iter() {
         let s = span.content.as_ref();
-        let s_len = s.chars().count();
+        let s_width = s.width();
 
-        if used + s_len <= max_width {
+        if used + s_width <= max_width {
             out.push(span);
-            used += s_len;
+            used += s_width;
             continue;
         }
 
@@ -227,8 +244,8 @@ fn build_truncated_line(spans: Vec<Span<'static>>, max_width: usize) -> Line<'st
             break;
         }
 
-        let truncated: String = s.chars().take(remaining).collect();
-        let styled = Span::styled(truncated + ell, span.style);
+        let truncated = take_by_width(s, remaining);
+        let styled = Span::styled(format!("{}{}", truncated, ell), span.style);
         out.push(styled);
         break;
     }
@@ -293,8 +310,8 @@ pub fn render(f: &mut Frame, app: &mut AppState) {
     match &app.mode {
         AppMode::DailyView => render_daily_view(f, app),
         AppMode::EntryView(_) => render_entry_detail(f, app),
-        AppMode::SelectEntry => render_entry_selection(f, app),
-        AppMode::SearchView => render_search_view(f, app),
+        // SelectEntry and SearchView variants were removed. Only render the
+        // modes actively used by the app.
         AppMode::DaySearchView => render_day_search_view(f, app),
         AppMode::ConfirmDelete(_) => {
             render_entry_detail(f, app);
@@ -337,106 +354,13 @@ fn render_daily_view(f: &mut Frame, app: &mut AppState) {
     render_footer(f, footer_area, app);
 }
 
-fn build_monthly_columns(app: &AppState) -> (Vec<Line<'static>>, Vec<Line<'static>>) {
-    use chrono::Datelike;
-    let current_month = app.current_date.month();
-    let current_year = app.current_date.year();
+// build_monthly_columns / date/summary column renderers are no longer used by
+// the current render flow (we keep the summary renderer used by the main
+// views). They can be removed later if you want a smaller binary.
+// (monthly column helpers removed) — kept render_summary_content which the
+// current UI uses.
 
-    let mut date_lines = Vec::new();
-    let mut summary_lines = Vec::new();
-
-    for day in 1..=31 {
-        if let Some(date) = NaiveDate::from_ymd_opt(current_year, current_month, day) {
-            let entries = app.db.get_entries_for_date(date).unwrap_or_default();
-            let summary = if let Some(first) = entries.first() {
-                let has_time = first.time != chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap();
-                let time_str = if has_time {
-                    format!("{} ", first.time.format("%H:%M"))
-                } else {
-                    "".to_string()
-                };
-                let preview = first.content.lines().next().unwrap_or("").trim();
-                format!("{}{}", time_str, preview)
-            } else {
-                "".to_string()
-            };
-
-            let is_current = date == app.current_date;
-
-            let day_abbr = date
-                .format("%a")
-                .to_string()
-                .chars()
-                .take(2)
-                .collect::<String>();
-
-            let date_text = format!("{:02} {}", day, day_abbr);
-            let date_style = if is_current {
-                Style::default()
-                    .fg(Color::Yellow)
-                    .add_modifier(Modifier::BOLD)
-            } else if summary.is_empty() {
-                Style::default().fg(Color::DarkGray)
-            } else {
-                Style::default()
-            };
-            date_lines.push(Line::from(vec![Span::styled(date_text, date_style)]));
-
-            if summary.is_empty() {
-                summary_lines.push(Line::from(""));
-            } else {
-                let style = if is_current {
-                    Style::default()
-                        .fg(Color::Yellow)
-                        .add_modifier(Modifier::BOLD)
-                } else {
-                    Style::default()
-                };
-                summary_lines.push(Line::from(vec![Span::styled(summary, style)]));
-            }
-
-            let is_last_day = day == 31
-                || NaiveDate::from_ymd_opt(current_year, current_month, day + 1).is_none();
-            if date.weekday() == chrono::Weekday::Sun && !is_last_day {
-                date_lines.push(Line::from(""));
-                summary_lines.push(Line::from(""));
-            }
-        } else {
-            break;
-        }
-    }
-
-    (date_lines, summary_lines)
-}
-
-fn render_date_column(f: &mut Frame, area: Rect, app: &AppState) {
-    let (date_lines, _summary_lines) = build_monthly_columns(app);
-    let date_paragraph = Paragraph::new(date_lines)
-        .block(
-            Block::default()
-                .borders(Borders::TOP | Borders::BOTTOM | Borders::LEFT)
-                .padding(ratatui::widgets::Padding::horizontal(1)),
-        )
-        .scroll((0, 0));
-    f.render_widget(date_paragraph, area);
-}
-
-fn render_summary_column(f: &mut Frame, area: Rect, app: &AppState) {
-    let (_date_lines, summary_lines) = build_monthly_columns(app);
-    // Build Text from Lines to ensure proper rendering and wrapping
-    let mut text = Text::default();
-    for line in summary_lines {
-        text.lines.push(line);
-    }
-    let summary_paragraph = Paragraph::new(text)
-        .block(
-            Block::default()
-                .borders(Borders::TOP | Borders::BOTTOM | Borders::RIGHT)
-                .padding(ratatui::widgets::Padding::horizontal(1)),
-        )
-        .scroll((0, 0));
-    f.render_widget(summary_paragraph, area);
-}
+// date/summary column helpers removed — render_summary_content remains in use.
 
 fn render_combined_header(f: &mut Frame, area: Rect, app: &AppState) {
     // Month name + date
@@ -772,12 +696,8 @@ fn render_footer(f: &mut Frame, area: Rect, app: &AppState) {
         AppMode::ConfirmDelete(_) => {
             "[y/Enter] confirm  [n/Esc] cancel"
         }
-        AppMode::SelectEntry => {
-            "[j/k] navigate  [Enter] select  [Esc] cancel"
-        }
-        AppMode::SearchView => "^n/^p:navigate Enter:jump Esc:cancel",
+        // SelectEntry/SearchView removed; provide only active variants.
         AppMode::DaySearchView => "Type to filter days  Enter:keep  Esc:cancel",
-        _ => "",
     };
 
     let footer = Paragraph::new(help_text)
@@ -831,73 +751,7 @@ fn render_day_search_view(f: &mut Frame, app: &mut AppState) {
     f.render_widget(search_input, search_area);
 }
 
-fn render_entry_selection(f: &mut Frame, app: &AppState) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3), // Header
-            Constraint::Min(0),    // Entry list
-            Constraint::Length(3), // Footer
-        ])
-        .split(f.size());
-
-    // Header
-    let header = Paragraph::new("Select entry to edit or create new")
-        .style(
-            Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::BOLD),
-        )
-        .alignment(Alignment::Center)
-        .block(Block::default().borders(Borders::ALL));
-    f.render_widget(header, chunks[0]);
-
-    // Entry list - add "+ New Entry" as first item
-    let entries = &app.entries;
-    let mut items: Vec<ListItem> = Vec::new();
-
-    // First item: "+ New Entry"
-    let new_entry_style = if app.selected_entry_index == 0 {
-        Style::default()
-            .fg(Color::Green)
-            .add_modifier(Modifier::BOLD)
-    } else {
-        Style::default().fg(Color::Green)
-    };
-    items.push(ListItem::new("+ New Entry").style(new_entry_style));
-
-    // Remaining items: existing entries
-    for (idx, entry) in entries.iter().enumerate() {
-        let time_loc = format!(
-            "{}. {} - {}",
-            idx + 1,
-            entry.time.format("%H:%M:%S"),
-            entry.location
-        );
-        let preview = entry.content.lines().next().unwrap_or("");
-        let content = format!("{}\n    {}", time_loc, preview);
-
-        let style = if idx + 1 == app.selected_entry_index {
-            Style::default()
-                .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD)
-        } else {
-            Style::default()
-        };
-
-        items.push(ListItem::new(content).style(style));
-    }
-
-    let list = List::new(items).block(Block::default().borders(Borders::ALL));
-    f.render_widget(list, chunks[1]);
-
-    // Footer
-    let footer = Paragraph::new("j/k:navigate Enter:select Esc:cancel")
-        .style(Style::default().fg(Color::Gray))
-        .alignment(Alignment::Center)
-        .block(Block::default().borders(Borders::ALL));
-    f.render_widget(footer, chunks[2]);
-}
+// Entry selection view removed.
 
 fn render_entry_detail(f: &mut Frame, app: &mut AppState) {
     // Layout: header | content | footer

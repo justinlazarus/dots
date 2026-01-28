@@ -114,8 +114,10 @@ fn handle_key_event<B: ratatui::backend::Backend + Write>(
         AppMode::DailyView => handle_daily_view_keys(app, key, modifiers, terminal),
         AppMode::EntryView(_) => handle_entry_view_keys(app, key, modifiers, terminal),
         AppMode::ConfirmDelete(_) => handle_confirm_delete_keys(app, key, terminal),
-        AppMode::SelectEntry => handle_select_entry_keys(app, key, terminal),
-        AppMode::SearchView => handle_search_keys(app, key, modifiers),
+        // SelectEntry variant removed from AppMode; its handler is no longer
+        // reachable. Fall through to the default branch.
+        // SearchView variant removed from AppMode; this branch should never
+        // occur. Keep DaySearchView which is used.
         AppMode::DaySearchView => handle_day_search_keys(app, key),
         // All AppMode variants are handled explicitly; no-op for unexpected
         _ => Ok(()),
@@ -232,51 +234,8 @@ fn handle_daily_view_keys<B: ratatui::backend::Backend + Write>(
     Ok(())
 }
 
-fn handle_select_entry_keys<B: ratatui::backend::Backend + Write>(
-    app: &mut AppState,
-    key: KeyCode,
-    terminal: &mut Terminal<B>,
-) -> Result<()> {
-    match key {
-        KeyCode::Esc => {
-            app.mode = AppMode::DailyView;
-        }
-        KeyCode::Char('j') | KeyCode::Down => {
-            // Navigate down (entries + 1 for "New Entry" option)
-            let max_index = app.entries.len();
-            if app.selected_entry_index < max_index {
-                app.selected_entry_index += 1;
-            }
-        }
-        KeyCode::Char('k') | KeyCode::Up => {
-            // Navigate up
-            if app.selected_entry_index > 0 {
-                app.selected_entry_index -= 1;
-            }
-        }
-
-        KeyCode::Enter => {
-            if app.selected_entry_index == 0 {
-                // Create new entry
-                handle_create_new_entry(app, terminal)?;
-            } else {
-                // Edit existing entry (index - 1 because 0 is "New Entry")
-                let entry_idx = app.selected_entry_index - 1;
-                handle_edit_entry(app, terminal, entry_idx)?;
-            }
-        }
-
-        KeyCode::Char('x') => {
-            // Delete selected entry (if not the New Entry option)
-            if app.selected_entry_index > 0 {
-                let entry_idx = app.selected_entry_index - 1;
-                app.mode = AppMode::ConfirmDelete(entry_idx);
-            }
-        }
-        _ => {}
-    }
-    Ok(())
-}
+// Selection view removed; helper kept for reference but unused. If you want
+// to delete this function entirely, say so and I'll remove it.
 
 fn handle_search_keys(
     app: &mut AppState,
