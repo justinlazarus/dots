@@ -29,27 +29,37 @@ fn parse_markdown_line(line: &str) -> Line<'static> {
             .collect::<String>()
             .trim()
             .to_string();
-        let style = match hash_count {
-            1 => Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::BOLD),
-            2 => Style::default()
-                .fg(Color::Blue)
-                .add_modifier(Modifier::BOLD),
-            3 => Style::default()
-                .fg(Color::Magenta)
-                .add_modifier(Modifier::BOLD),
-            4 => Style::default()
-                .fg(Color::Green)
-                .add_modifier(Modifier::BOLD),
-            5 => Style::default()
-                .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD),
-            _ => Style::default()
-                .fg(Color::Gray)
-                .add_modifier(Modifier::BOLD),
+        // Use stronger visual distinctions between header levels: prefixes and
+        // different modifier combinations (underline, italic, dim) so levels are
+        // more clearly differentiated in the terminal.
+        // Render a small pill for the header level (e.g. "#", "##") followed by
+        // the header text. Each level uses a distinct pill background color for
+        // quick visual scanning while keeping the header text readable.
+        let pill_text = format!(" {} ", "#".repeat(hash_count));
+
+        let (bg, fg) = match hash_count {
+            1 => (Color::Yellow, Color::Black),
+            2 => (Color::Cyan, Color::Black),
+            3 => (Color::Magenta, Color::Black),
+            4 => (Color::Green, Color::Black),
+            5 => (Color::White, Color::Black),
+            _ => (Color::DarkGray, Color::White),
         };
-        return Line::from(vec![Span::styled(header_text, style)]);
+
+        let pill_span = Span::styled(
+            pill_text,
+            Style::default().bg(bg).fg(fg).add_modifier(Modifier::BOLD),
+        );
+
+        // Header text styled strongly so it stands out next to the pill
+        let header_span = Span::styled(
+            format!(" {}", header_text),
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
+        );
+
+        return Line::from(vec![pill_span, header_span]);
     }
 
     // Check for ordered list with optional indentation, e.g. "1. " or "  2. "
