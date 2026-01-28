@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use regex::Regex;
 use std::collections::HashMap;
 
@@ -99,6 +99,8 @@ pub fn write_summary_file(
         }
         writeln!(file)?;
     }
+
+    // UI hint: We don't write summaries.md anymore but keep writer for compatibility
 
     Ok(())
 }

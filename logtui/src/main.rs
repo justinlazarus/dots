@@ -6,13 +6,13 @@ mod summary;
 mod ui;
 
 use anyhow::{Context, Result};
-use chrono::{Datelike, Local, NaiveDate};
+use chrono::{Datelike, Local};
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use models::{AppMode, AppState, TagFilter};
+use models::{AppMode, AppState};
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 use std::io::Write;
@@ -30,17 +30,24 @@ fn main() -> Result<()> {
     // Fetch initial entries for today from DB
     let initial_entries = database.get_entries_for_date(today)?;
 
-    // Load summaries (kept as markdown for now as per your preference)
-    // You could also move these to DB later
-    let summary_path = PathBuf::from("summaries.md");
-    let monthly_summaries = if summary_path.exists() {
-        let content = std::fs::read_to_string(&summary_path)?;
-        summary::parse_summary_file(&content, today.year())?
-    } else {
-        summary::MonthlySummaries::new()
-    };
-
+    // Load summaries from DB (migrated from markdown if necessary)
     let mut app = AppState::new(database, db_path, today.year(), initial_entries);
+
+    // If summaries.md exists, parse and write into DB (one-time migration)
+    let summary_path = PathBuf::from("summaries.md");
+    if summary_path.exists() {
+        let content = std::fs::read_to_string(&summary_path)?;
+        let ms = summary::parse_summary_file(&content, today.year())?;
+        for (date, text) in ms.summaries.iter() {
+            app.db.set_summary(*date, text)?;
+        }
+    }
+
+    // Load summaries from DB into in-memory structure
+    let mut monthly_summaries = summary::MonthlySummaries::new();
+    for (date, text) in app.db.get_all_summaries()? {
+        monthly_summaries.summaries.insert(date, text);
+    }
     app.monthly_summaries = monthly_summaries;
 
     // We no longer track last_location in AppState — YAML frontmatter carries location now
@@ -97,9 +104,15 @@ fn handle_key_event<B: ratatui::backend::Backend + Write>(
     modifiers: event::KeyModifiers,
     terminal: &mut Terminal<B>,
 ) -> Result<()> {
+    // Global quit mapping available from any view
+    if let KeyCode::Char('q') = key {
+        app.should_quit = true;
+        return Ok(());
+    }
+
     match &app.mode {
         AppMode::DailyView => handle_daily_view_keys(app, key, modifiers, terminal),
-        AppMode::EntryView(_) => handle_entry_view_keys(app, key, terminal),
+        AppMode::EntryView(_) => handle_entry_view_keys(app, key, modifiers, terminal),
         AppMode::ConfirmDelete(_) => handle_confirm_delete_keys(app, key, terminal),
         AppMode::SelectEntry => handle_select_entry_keys(app, key, terminal),
         AppMode::SearchView => handle_search_keys(app, key, modifiers),
@@ -140,21 +153,32 @@ fn handle_daily_view_keys<B: ratatui::backend::Backend + Write>(
             app.day_search_query.clear();
         }
         KeyCode::Char('S') => {
-            // Edit summary for the current date
+            // Edit summary for the current date (prefill with existing summary)
             suspend_tui(terminal)?;
 
             let current = app.monthly_summaries.get_summary(&app.current_date);
-            match editor::edit_summary(app.current_date, &current)? {
-                Some(new_text) => {
-                    // Update in-memory and on-disk summaries
-                    app.monthly_summaries
-                        .set_summary(app.current_date, &new_text);
-                    let summary_path = PathBuf::from("summaries.md");
-                    summary::write_summary_file(&summary_path, app.year, &app.monthly_summaries)?;
-                }
-                None => {
-                    // cancelled or editor failed; do nothing
-                }
+            if let Some(new_text) = editor::edit_summary(app.current_date, &current)? {
+                // Persist to DB (set_summary will delete if empty)
+                app.db.set_summary(app.current_date, &new_text)?;
+                // Update in-memory cache
+                app.monthly_summaries
+                    .set_summary(app.current_date, &new_text);
+            }
+
+            resume_tui(terminal)?;
+        }
+        KeyCode::Char('i') => {
+            // Insert or edit summary for the current date: open editor
+            // with existing text if present, otherwise empty body
+            suspend_tui(terminal)?;
+
+            let current = app.monthly_summaries.get_summary(&app.current_date);
+            if let Some(new_text) = editor::edit_summary(app.current_date, &current)? {
+                // Persist to DB (set_summary will delete if empty)
+                app.db.set_summary(app.current_date, &new_text)?;
+                // Update in-memory cache
+                app.monthly_summaries
+                    .set_summary(app.current_date, &new_text);
             }
 
             resume_tui(terminal)?;
@@ -334,6 +358,7 @@ fn handle_day_search_keys(app: &mut AppState, key: KeyCode) -> Result<()> {
 fn handle_entry_view_keys<B: ratatui::backend::Backend + Write>(
     app: &mut AppState,
     key: KeyCode,
+    modifiers: event::KeyModifiers,
     terminal: &mut Terminal<B>,
 ) -> Result<()> {
     match key {
@@ -371,6 +396,22 @@ fn handle_entry_view_keys<B: ratatui::backend::Backend + Write>(
         KeyCode::Esc => {
             app.mode = AppMode::DailyView;
         }
+        KeyCode::Char('d') if modifiers.contains(event::KeyModifiers::CONTROL) => {
+            // Ctrl+d: Scroll down one page
+            app.scroll_offset = app.scroll_offset.saturating_add(app.viewport_height as u16);
+        }
+        KeyCode::Char('u') if modifiers.contains(event::KeyModifiers::CONTROL) => {
+            // Ctrl+u: Scroll up one page
+            app.scroll_offset = app.scroll_offset.saturating_sub(app.viewport_height as u16);
+        }
+        KeyCode::Char('d') => {
+            // Scroll down one line
+            app.scroll_offset = app.scroll_offset.saturating_add(1);
+        }
+        KeyCode::Char('u') => {
+            // Scroll up one line
+            app.scroll_offset = app.scroll_offset.saturating_sub(1);
+        }
         _ => {}
     }
     Ok(())
@@ -379,7 +420,7 @@ fn handle_entry_view_keys<B: ratatui::backend::Backend + Write>(
 fn handle_confirm_delete_keys<B: ratatui::backend::Backend + Write>(
     app: &mut AppState,
     key: KeyCode,
-    terminal: &mut Terminal<B>,
+    _terminal: &mut Terminal<B>,
 ) -> Result<()> {
     match key {
         KeyCode::Char('y') | KeyCode::Enter => {
@@ -414,7 +455,7 @@ fn handle_confirm_delete_keys<B: ratatui::backend::Backend + Write>(
 
 fn handle_edit_or_create_entry<B: ratatui::backend::Backend + Write>(
     app: &mut AppState,
-    terminal: &mut Terminal<B>,
+    _terminal: &mut Terminal<B>,
 ) -> Result<()> {
     // Always show selection menu with "+ New Entry" option at top
     app.selected_entry_index = 0;

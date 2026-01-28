@@ -72,7 +72,61 @@ impl Database {
         }
         // Index for fast chronological sorting in the TUI
         conn.execute("CREATE INDEX IF NOT EXISTS idx_logs_date ON logs(date)", [])?;
+
+        // Summary table to store per-day summaries (migrated from markdown)
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS summaries (
+                date TEXT PRIMARY KEY,
+                text TEXT NOT NULL
+            )",
+            [],
+        )?;
         Ok(Self { conn })
+    }
+
+    pub fn get_summary(&self, date: NaiveDate) -> Result<Option<String>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT text FROM summaries WHERE date = ?1")?;
+        let mut rows = stmt.query([date.to_string()])?;
+        if let Some(row) = rows.next()? {
+            let text: String = row.get(0)?;
+            Ok(Some(text))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn set_summary(&self, date: NaiveDate, text: &str) -> Result<()> {
+        if text.trim().is_empty() {
+            self.conn.execute(
+                "DELETE FROM summaries WHERE date = ?1",
+                params![date.to_string()],
+            )?;
+        } else {
+            self.conn.execute(
+                "INSERT INTO summaries (date, text) VALUES (?1, ?2)
+                 ON CONFLICT(date) DO UPDATE SET text = excluded.text",
+                params![date.to_string(), text],
+            )?;
+        }
+        Ok(())
+    }
+
+    pub fn get_all_summaries(&self) -> Result<Vec<(NaiveDate, String)>> {
+        let mut stmt = self.conn.prepare("SELECT date, text FROM summaries")?;
+        let rows = stmt.query_map([], |row| {
+            let date_str: String = row.get(0)?;
+            let date: NaiveDate = date_str.parse().unwrap();
+            let text: String = row.get(1)?;
+            Ok((date, text))
+        })?;
+
+        let mut out = Vec::new();
+        for r in rows {
+            out.push(r?);
+        }
+        Ok(out)
     }
 
     pub fn save_entry(&self, entry: &LogEntry) -> Result<()> {

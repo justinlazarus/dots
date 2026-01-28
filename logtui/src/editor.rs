@@ -39,7 +39,6 @@ pub fn edit_new_entry(
     writeln!(temp_file, "time: {}", now.time().format("%H:%M:%S"))?;
     // Write location even if empty; parser will accept empty location
     writeln!(temp_file, "location: {}", location.unwrap_or_default())?;
-    writeln!(temp_file, "type: log")?;
     if let Some(tag) = default_tag {
         writeln!(temp_file, "tag: {}", tag)?;
     }
@@ -85,7 +84,6 @@ pub fn edit_existing_entry(
     writeln!(temp_file, "date: {}", date_str)?;
     writeln!(temp_file, "time: {}", time_str)?;
     writeln!(temp_file, "location: {}", location)?;
-    writeln!(temp_file, "type: log")?;
     if let Some(t) = tag {
         writeln!(temp_file, "tag: {}", t)?;
     }
@@ -161,11 +159,8 @@ pub fn edit_summary(date: chrono::NaiveDate, current: &str) -> Result<Option<Str
         content.trim().to_string()
     };
 
-    if body.is_empty() {
-        Ok(None)
-    } else {
-        Ok(Some(body))
-    }
+    // Return the body even if empty — caller decides whether empty means delete
+    Ok(Some(body))
 }
 
 /// Parse edited entry content including datetime
@@ -206,7 +201,6 @@ fn parse_yaml_frontmatter(content: &str) -> Result<Option<(String, String, Optio
     // Parse frontmatter
     let mut location: Option<String> = None;
     let mut tag: Option<String> = None;
-    let mut entry_type: Option<String> = None;
 
     for line in &lines[start_idx + 1..end_idx] {
         if let Some(colon_pos) = line.find(':') {
@@ -223,11 +217,7 @@ fn parse_yaml_frontmatter(content: &str) -> Result<Option<(String, String, Optio
                         tag = Some(value.to_string());
                     }
                 }
-                "type" => {
-                    if !value.is_empty() {
-                        entry_type = Some(value.to_string());
-                    }
-                }
+                // ignore `type` field — DB only stores `tag`
                 "date" | "time" => {
                     // We read these but don't use them for new entries
                     // (we use current date/time instead)
@@ -246,8 +236,8 @@ fn parse_yaml_frontmatter(content: &str) -> Result<Option<(String, String, Optio
     // Use empty string for missing location
     let final_location = location.unwrap_or_default();
 
-    // Use type as tag if no explicit tag provided
-    let final_tag = tag.or(entry_type);
+    // DB only stores `tag`; use tag if present, otherwise None
+    let final_tag = tag;
 
     Ok(Some((final_location, content_str, final_tag)))
 }

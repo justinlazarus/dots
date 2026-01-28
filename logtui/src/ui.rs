@@ -14,14 +14,95 @@ fn parse_markdown_line(line: &str) -> Line<'static> {
     let chars: Vec<char> = line.chars().collect();
     let mut i = 0;
 
-    // Check for header (# at start)
-    if line.starts_with("# ") {
-        return Line::from(vec![Span::styled(
-            line.to_string(),
-            Style::default()
+    // Check for markdown header levels (# through ######) using the collected
+    // `chars: Vec<char>` above. If the line starts with one or more '#' followed
+    // by a space, treat it as a header and style according to level.
+    let mut hash_count = 0usize;
+    while hash_count < chars.len() && chars[hash_count] == '#' {
+        hash_count += 1;
+    }
+    if hash_count > 0 && hash_count < chars.len() && chars[hash_count] == ' ' {
+        // Build header text from remaining chars after '#+' and the space
+        let header_text: String = chars[hash_count + 1..]
+            .iter()
+            .collect::<String>()
+            .trim()
+            .to_string();
+        let style = match hash_count {
+            1 => Style::default()
                 .fg(Color::Cyan)
                 .add_modifier(Modifier::BOLD),
-        )]);
+            2 => Style::default()
+                .fg(Color::Blue)
+                .add_modifier(Modifier::BOLD),
+            3 => Style::default()
+                .fg(Color::Magenta)
+                .add_modifier(Modifier::BOLD),
+            4 => Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+            5 => Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+            _ => Style::default()
+                .fg(Color::Gray)
+                .add_modifier(Modifier::BOLD),
+        };
+        return Line::from(vec![Span::styled(header_text, style)]);
+    }
+
+    // Check for ordered list with optional indentation, e.g. "1. " or "  2. "
+    // and render the numeric marker in gray followed by the parsed remainder.
+    let mut pos = 0usize;
+    while pos < chars.len() && chars[pos] == ' ' {
+        pos += 1;
+    }
+    let indent_level = pos / 2;
+    if pos < chars.len() && chars[pos].is_ascii_digit() {
+        let mut j = pos;
+        while j < chars.len() && chars[j].is_ascii_digit() {
+            j += 1;
+        }
+        if j < chars.len() && chars[j] == '.' && j + 1 < chars.len() && chars[j + 1] == ' ' {
+            let number: String = chars[pos..j].iter().collect();
+            let remainder: String = chars[j + 2..].iter().collect();
+            let mut spans: Vec<Span<'static>> = Vec::new();
+            if indent_level > 0 {
+                spans.push(Span::raw("  ".repeat(indent_level)));
+            }
+            spans.push(Span::styled(
+                format!("{}.", number),
+                Style::default().fg(Color::Gray),
+            ));
+            spans.push(Span::raw(" "));
+            let rest_line = parse_markdown_line(&remainder);
+            for s in rest_line.spans {
+                spans.push(s);
+            }
+            return Line::from(spans);
+        }
+    }
+
+    // Check for unordered list markers ('- ', '* ', '+ ') at start of line.
+    // Render as a light-grey bullet (•) followed by parsed markdown for the rest
+    // of the line so inline formatting still applies.
+    if chars.len() >= 2
+        && (chars[0] == '-' || chars[0] == '*' || chars[0] == '+')
+        && chars[1] == ' '
+    {
+        let remainder: String = chars[2..].iter().collect();
+        let mut spans: Vec<Span<'static>> = Vec::new();
+        // Bullet (light grey)
+        spans.push(Span::styled(
+            "• ".to_string(),
+            Style::default().fg(Color::Gray),
+        ));
+        // Parse the remainder as markdown to preserve bold/italic/code and highlights
+        let rest_line = parse_markdown_line(&remainder);
+        for s in rest_line.spans {
+            spans.push(s);
+        }
+        return Line::from(spans);
     }
 
     while i < chars.len() {
@@ -34,7 +115,9 @@ fn parse_markdown_line(line: &str) -> Line<'static> {
                     let text: String = chars[start..end].iter().collect();
                     spans.push(Span::styled(
                         text,
-                        Style::default().add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(Color::White)
+                            .add_modifier(Modifier::BOLD),
                     ));
                     i = end + 2;
                     break;
@@ -43,7 +126,7 @@ fn parse_markdown_line(line: &str) -> Line<'static> {
             }
             if end + 1 >= chars.len() {
                 // No closing **, treat as literal
-                spans.push(Span::raw("**".to_string()));
+                spans.push(Span::styled("**".to_string(), Style::default()));
                 i += 2;
             }
         }
@@ -58,11 +141,16 @@ fn parse_markdown_line(line: &str) -> Line<'static> {
                 let text: String = chars[start..end].iter().collect();
                 spans.push(Span::styled(
                     text,
-                    Style::default().add_modifier(Modifier::ITALIC),
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::ITALIC),
                 ));
                 i = end + 1;
             } else {
-                spans.push(Span::raw("*".to_string()));
+                spans.push(Span::styled(
+                    "*".to_string(),
+                    Style::default().fg(Color::White),
+                ));
                 i += 1;
             }
         }
@@ -78,7 +166,10 @@ fn parse_markdown_line(line: &str) -> Line<'static> {
                 spans.push(Span::styled(text, Style::default().fg(Color::Green)));
                 i = end + 1;
             } else {
-                spans.push(Span::raw("`".to_string()));
+                spans.push(Span::styled(
+                    "`".to_string(),
+                    Style::default().fg(Color::White),
+                ));
                 i += 1;
             }
         }
@@ -90,16 +181,59 @@ fn parse_markdown_line(line: &str) -> Line<'static> {
                 i += 1;
             }
             if !text.is_empty() {
-                spans.push(Span::raw(text));
+                // make plain text explicit white so it shows up consistently
+                spans.push(Span::styled(text, Style::default().fg(Color::White)));
             }
         }
     }
 
     if spans.is_empty() {
-        Line::from(line.to_string())
+        Line::from(vec![Span::styled(line.to_string(), Style::default())])
     } else {
         Line::from(spans)
     }
+}
+
+/// Build a Line from spans truncated to max_width characters. If truncated, append '...'.
+fn build_truncated_line(spans: Vec<Span<'static>>, max_width: usize) -> Line<'static> {
+    if max_width == 0 {
+        return Line::from("");
+    }
+
+    let mut out: Vec<Span<'static>> = Vec::new();
+    let mut used: usize = 0;
+    let ell = "...";
+    let ell_len = ell.chars().count();
+
+    for span in spans.into_iter() {
+        let s = span.content.as_ref();
+        let s_len = s.chars().count();
+
+        if used + s_len <= max_width {
+            out.push(span);
+            used += s_len;
+            continue;
+        }
+
+        // Need to truncate this span to fit the remaining space (reserving room for ellipsis)
+        let remaining = if used + ell_len >= max_width {
+            0
+        } else {
+            max_width - used - ell_len
+        };
+
+        if remaining == 0 {
+            out.push(Span::styled(ell.to_string(), Style::default()));
+            break;
+        }
+
+        let truncated: String = s.chars().take(remaining).collect();
+        let styled = Span::styled(truncated + ell, span.style);
+        out.push(styled);
+        break;
+    }
+
+    Line::from(out)
 }
 
 /// Highlight search matches in text with yellow background
@@ -132,7 +266,10 @@ fn highlight_matches(line: &str, query: &str) -> Line<'static> {
     for (match_start, match_end) in matches {
         // Add text before match
         if match_start > last_end {
-            spans.push(Span::raw(line[last_end..match_start].to_string()));
+            spans.push(Span::styled(
+                line[last_end..match_start].to_string(),
+                Style::default(),
+            ));
         }
 
         // Add highlighted match
@@ -146,7 +283,7 @@ fn highlight_matches(line: &str, query: &str) -> Line<'static> {
 
     // Add remaining text
     if last_end < line.len() {
-        spans.push(Span::raw(line[last_end..].to_string()));
+        spans.push(Span::styled(line[last_end..].to_string(), Style::default()));
     }
 
     Line::from(spans)
@@ -212,13 +349,10 @@ fn build_monthly_columns(app: &AppState) -> (Vec<Line<'static>>, Vec<Line<'stati
     let mut date_lines = Vec::new();
     let mut summary_lines = Vec::new();
 
-    // Calculate content width heuristically; rendering will clip
     for day in 1..=31 {
         if let Some(date) = NaiveDate::from_ymd_opt(current_year, current_month, day) {
-            // Build a one-line preview from the first entry of the day if available
             let entries = app.db.get_entries_for_date(date).unwrap_or_default();
             let summary = if let Some(first) = entries.first() {
-                // show time (if present) and first content line
                 let has_time = first.time != chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap();
                 let time_str = if has_time {
                     format!("{} ", first.time.format("%H:%M"))
@@ -228,11 +362,11 @@ fn build_monthly_columns(app: &AppState) -> (Vec<Line<'static>>, Vec<Line<'stati
                 let preview = first.content.lines().next().unwrap_or("").trim();
                 format!("{}{}", time_str, preview)
             } else {
-                "—".to_string()
+                "".to_string()
             };
+
             let is_current = date == app.current_date;
 
-            // Get 2-char day abbreviation
             let day_abbr = date
                 .format("%a")
                 .to_string()
@@ -252,11 +386,9 @@ fn build_monthly_columns(app: &AppState) -> (Vec<Line<'static>>, Vec<Line<'stati
             };
             date_lines.push(Line::from(vec![Span::styled(date_text, date_style)]));
 
-            // Summary column - keep simple: one line or wrapped lines
             if summary.is_empty() {
                 summary_lines.push(Line::from(""));
             } else {
-                // naive wrapping: push the whole summary as a single line (wrap happens in UI)
                 let style = if is_current {
                     Style::default()
                         .fg(Color::Yellow)
@@ -267,7 +399,6 @@ fn build_monthly_columns(app: &AppState) -> (Vec<Line<'static>>, Vec<Line<'stati
                 summary_lines.push(Line::from(vec![Span::styled(summary, style)]));
             }
 
-            // Add blank line after Sunday for visual grouping
             let is_last_day = day == 31
                 || NaiveDate::from_ymd_opt(current_year, current_month, day + 1).is_none();
             if date.weekday() == chrono::Weekday::Sun && !is_last_day {
@@ -359,108 +490,56 @@ fn render_entries(f: &mut Frame, area: Rect, app: &mut AppState) {
         return;
     }
 
-    // Build text with all entries
+    // Build a single-line preview for each entry and add to text (one line per entry)
     let mut text = Text::default();
-
-    for (idx, entry) in entries.iter().enumerate() {
-        if idx > 0 {
-            text.lines.push(Line::from("")); // Single blank line separator
-        }
-
-        // Time and location line with optional tag
-        let mut header_spans = Vec::new();
-
-        // Add tag if present (in cyan brackets)
-        if let Some(ref tag) = entry.tag {
-            header_spans.push(Span::styled(
-                format!("[{}] ", tag),
-                Style::default().fg(Color::Cyan),
-            ));
-        }
-
-        // Check if entry has explicit time (not 00:00:00 sentinel)
+    let visible_width = area.width.saturating_sub(4) as usize; // account for borders/padding
+    for entry in entries.iter() {
+        // Determine presence of time and tag
         let has_time = entry.time != chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+        let has_tag = entry.tag.as_ref().map(|s| !s.is_empty()).unwrap_or(false);
 
-        if has_time {
-            // Entry has time - show time and location in yellow/bold
-            let time_loc = format!("{} - {}", entry.time.format("%H:%M:%S"), entry.location);
-            header_spans.push(Span::styled(
-                time_loc,
+        let first_content = entry.content.lines().next().unwrap_or("").trim();
+
+        // Build a one-line preview according to rules: if both time and tag present, show
+        // colored "HH:MM:SS [tag]  content"; otherwise show content only. Ensure the
+        // preview uses the same styled spans as the detailed view.
+        let mut spans_vec: Vec<Span<'static>> = Vec::new();
+
+        // Determine how to produce the content spans (with or without highlighting)
+        let content_line: Line<'static> = if !app.day_search_query.is_empty() {
+            highlight_matches(first_content, &app.day_search_query)
+        } else {
+            parse_markdown_line(first_content)
+        };
+
+        if has_time && has_tag && !first_content.is_empty() {
+            // Time (yellow bold)
+            spans_vec.push(Span::styled(
+                format!("{} ", entry.time.format("%H:%M:%S")),
                 Style::default()
                     .fg(Color::Yellow)
                     .add_modifier(Modifier::BOLD),
             ));
-        } else {
-            // Entry has no time (retrospective) - show just location in regular gray
-            header_spans.push(Span::styled(
-                entry.location.clone(),
-                Style::default().fg(Color::Gray),
+
+            // Tag (cyan)
+            spans_vec.push(Span::styled(
+                format!("[{}] ", entry.tag.as_ref().unwrap()),
+                Style::default().fg(Color::Cyan),
             ));
-        }
 
-        // Get content lines
-        let content_lines: Vec<&str> = entry.content.lines().collect();
-
-        if content_lines.is_empty() {
-            // Entry has no content, just show header with blank line after
-            text.lines.push(Line::from(header_spans));
-            text.lines.push(Line::from(""));
+            // Append content spans
+            for s in content_line.spans {
+                spans_vec.push(s);
+            }
         } else {
-            // First line: merge with header (two spaces separator)
-            let first_line = content_lines[0];
-
-            header_spans.push(Span::raw("  "));
-
-            // Add first content line to header (with highlighting if active)
-            if !app.day_search_query.is_empty() {
-                let highlighted = highlight_matches(first_line, &app.day_search_query);
-                for span in highlighted.spans {
-                    // Apply gray color to retrospective entries
-                    if !has_time {
-                        header_spans.push(Span::styled(
-                            span.content.to_string(),
-                            Style::default().fg(Color::Gray),
-                        ));
-                    } else {
-                        header_spans.push(span);
-                    }
-                }
-            } else {
-                let parsed = parse_markdown_line(first_line);
-                for span in parsed.spans {
-                    // Apply gray color to retrospective entries
-                    if !has_time {
-                        header_spans.push(Span::styled(
-                            span.content.to_string(),
-                            Style::default().fg(Color::Gray),
-                        ));
-                    } else {
-                        header_spans.push(span);
-                    }
-                }
-            }
-
-            text.lines.push(Line::from(header_spans));
-
-            // Remaining lines: render with gray color for retrospective entries
-            for line in content_lines.iter().skip(1) {
-                if !has_time {
-                    // Retrospective entry - render in gray
-                    text.lines.push(Line::from(Span::styled(
-                        line.to_string(),
-                        Style::default().fg(Color::Gray),
-                    )));
-                } else {
-                    // Normal entry - render with highlighting/markdown
-                    if !app.day_search_query.is_empty() {
-                        text.lines
-                            .push(highlight_matches(line, &app.day_search_query));
-                    } else {
-                        text.lines.push(parse_markdown_line(line));
-                    }
-                }
+            // Content only (possibly highlighted)
+            for s in content_line.spans {
+                spans_vec.push(s);
             }
         }
+
+        text.lines
+            .push(build_truncated_line(spans_vec, visible_width));
     }
 
     // Calculate wrapped line count
@@ -505,7 +584,9 @@ fn render_entries(f: &mut Frame, area: Rect, app: &mut AppState) {
             Block::default()
                 .borders(Borders::ALL)
                 .title(page_indicator)
-                .padding(ratatui::widgets::Padding::uniform(1)),
+                // keep horizontal padding but remove vertical padding so the
+                // first entry appears on the first line inside the box
+                .padding(ratatui::widgets::Padding::horizontal(1)),
         );
 
     f.render_widget(paragraph, area);
@@ -687,7 +768,7 @@ fn render_summary_content(f: &mut Frame, area: Rect, app: &AppState) {
 fn render_footer(f: &mut Frame, area: Rect, app: &AppState) {
     let help_text = match &app.mode {
         AppMode::DailyView => {
-            "[j/k] day  [^n/^p] month  [h/l] tag  [^d/^u] page  [Enter] open  [s/^s] search  [t] today  [q] quit"
+            "[j/k] day  [^n/^p] month  [h/l] tag  [^d/^u] page  [Enter] open  [s/^s] search  [t] today  [i] add summary  [q] quit"
         }
         AppMode::EntryView(_) => {
             "[j/k] next/prev  [Enter] edit  [n] new  [x] delete  [Esc] back"
@@ -865,45 +946,49 @@ fn render_entry_detail(f: &mut Frame, app: &mut AppState) {
 
         let mut text = Text::default();
 
-        // Header spans for tag/time/location
-        let mut header_spans = Vec::new();
-        if let Some(ref tag) = entry.tag {
-            header_spans.push(Span::styled(
-                format!("[{}] ", tag),
-                Style::default().fg(Color::Cyan),
-            ));
-        }
-
+        // Header: keep time and type (tag) on the top line, then leave two blank
+        // lines before rendering the full content. Location is shown after time
+        // in dim gray to keep context.
+        let mut top_header_spans: Vec<Span<'static>> = Vec::new();
         let has_time = entry.time != chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+
         if has_time {
-            header_spans.push(Span::styled(
-                format!("{} - {}  ", entry.time.format("%H:%M:%S"), entry.location),
+            top_header_spans.push(Span::styled(
+                format!("{}", entry.time.format("%H:%M:%S")),
                 Style::default()
                     .fg(Color::Yellow)
                     .add_modifier(Modifier::BOLD),
             ));
+
+            if let Some(ref tag) = entry.tag {
+                top_header_spans.push(Span::styled(
+                    format!(" [{}]", tag),
+                    Style::default().fg(Color::Cyan),
+                ));
+            }
+        } else if let Some(ref tag) = entry.tag {
+            top_header_spans.push(Span::styled(
+                format!("[{}]", tag),
+                Style::default().fg(Color::Cyan),
+            ));
         } else {
-            header_spans.push(Span::styled(
+            top_header_spans.push(Span::styled(
                 entry.location.clone(),
                 Style::default().fg(Color::Gray),
             ));
         }
 
-        // First line combined with header
-        let content_lines: Vec<&str> = entry.content.lines().collect();
-        if content_lines.is_empty() {
-            text.lines.push(Line::from(header_spans));
-        } else {
-            let first = content_lines[0];
-            header_spans.push(Span::raw("  "));
-            for span in parse_markdown_line(first).spans {
-                header_spans.push(span);
-            }
-            text.lines.push(Line::from(header_spans));
+        // Push the top header line
+        text.lines.push(Line::from(top_header_spans));
 
-            for line in content_lines.iter().skip(1) {
-                text.lines.push(parse_markdown_line(line));
-            }
+        // Add two blank separator lines before the content
+        text.lines.push(Line::from(""));
+        text.lines.push(Line::from(""));
+
+        // Now render the full content, each line parsed as markdown
+        let content_lines: Vec<&str> = entry.content.lines().collect();
+        for line in content_lines.iter() {
+            text.lines.push(parse_markdown_line(line));
         }
 
         let paragraph = Paragraph::new(text)
