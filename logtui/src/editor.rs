@@ -149,8 +149,7 @@ pub fn edit_summary(date: chrono::NaiveDate, current: &str) -> Result<Option<Str
     let body = if !lines.is_empty() && lines[0].trim_start().starts_with('#') {
         lines
             .iter()
-            .skip(1)
-            .map(|s| *s)
+            .skip(1).copied()
             .collect::<Vec<&str>>()
             .join("\n")
             .trim()

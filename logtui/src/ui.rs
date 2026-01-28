@@ -474,7 +474,7 @@ fn render_entries(f: &mut Frame, area: Rect, app: &mut AppState) {
         if line_len == 0 {
             total_wrapped_lines += 1; // Empty line
         } else {
-            let wrapped = (line_len + text_width - 1) / text_width;
+            let wrapped = line_len.div_ceil(text_width);
             total_wrapped_lines += wrapped.max(1);
         }
     }
@@ -486,7 +486,7 @@ fn render_entries(f: &mut Frame, area: Rect, app: &mut AppState) {
         1
     };
     let total_pages = if app.viewport_height > 0 && total_wrapped_lines > 0 {
-        (total_wrapped_lines + app.viewport_height - 1) / app.viewport_height
+        total_wrapped_lines.div_ceil(app.viewport_height)
     } else {
         1
     };
@@ -499,7 +499,7 @@ fn render_entries(f: &mut Frame, area: Rect, app: &mut AppState) {
 
     let paragraph = Paragraph::new(text)
         .wrap(Wrap { trim: false })
-        .scroll((app.scroll_offset as u16, 0))
+        .scroll((app.scroll_offset, 0))
         .block(
             Block::default()
                 .borders(Borders::ALL)
@@ -843,7 +843,7 @@ fn render_entry_detail(f: &mut Frame, app: &mut AppState) {
 
         let paragraph = Paragraph::new(text)
             .wrap(Wrap { trim: false })
-            .scroll((app.scroll_offset as u16, 0))
+            .scroll((app.scroll_offset, 0))
             .block(
                 Block::default()
                     .borders(Borders::ALL)
