@@ -20,6 +20,7 @@ impl Database {
                 time TEXT NOT NULL,
                 location TEXT,
                 tag TEXT,
+                title TEXT,
                 content TEXT NOT NULL
             )",
             [],
@@ -51,6 +52,7 @@ impl Database {
                     time TEXT NOT NULL,
                     location TEXT,
                     tag TEXT,
+                    title TEXT,
                     content TEXT NOT NULL
                 )",
                 [],
@@ -58,10 +60,10 @@ impl Database {
 
             // Copy data over; allow NULL when location is empty string
             tx.execute(
-                "INSERT INTO logs_new (id,date,time,location,tag,content)
+                "INSERT INTO logs_new (id,date,time,location,tag,title,content)
                  SELECT id,date,time,
                         CASE WHEN trim(location) = '' THEN NULL ELSE location END,
-                        tag,content FROM logs",
+                        tag, title, content FROM logs",
                 [],
             )?;
 
@@ -72,6 +74,35 @@ impl Database {
         }
         // Index for fast chronological sorting in the TUI
         conn.execute("CREATE INDEX IF NOT EXISTS idx_logs_date ON logs(date)", [])?;
+
+        // Ensure 'title' column exists for older DBs; add column if missing
+        // Check PRAGMA table_info(logs)
+        {
+            let mut has_title = false;
+            let mut stmt = conn.prepare("PRAGMA table_info(logs)")?;
+            let mut rows = stmt.query([])?;
+            while let Some(row) = rows.next()? {
+                let col_name: String = row.get(1)?;
+                if col_name == "title" {
+                    has_title = true;
+                    break;
+                }
+            }
+            if !has_title {
+                conn.execute("ALTER TABLE logs ADD COLUMN title TEXT", [])?;
+            }
+        }
+
+        // Backfill title for existing rows where title is NULL or empty by
+        // extracting the first non-empty line from content. This is safe to
+        // run multiple times and is idempotent.
+        conn.execute_batch(
+            "BEGIN;
+             UPDATE logs
+             SET title = TRIM(substr(content, 1, CASE WHEN instr(content, '\n') = 0 THEN length(content) ELSE instr(content, '\n') - 1 END))
+             WHERE (title IS NULL OR trim(title) = '') AND trim(content) != '';
+             COMMIT;",
+        )?;
 
         // Summary table to store per-day summaries (migrated from markdown)
         conn.execute(
@@ -127,13 +158,14 @@ impl Database {
         };
 
         self.conn.execute(
-            "INSERT INTO logs (id, date, time, location, tag, content) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO logs (id, date, time, location, tag, title, content) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 entry.id,
                 entry.date.to_string(),
                 entry.time.to_string(),
                 loc_param,
                 entry.tag.as_deref(),
+                entry.title.as_deref(),
                 entry.content
             ],
         )?;
@@ -148,13 +180,14 @@ impl Database {
         };
 
         self.conn.execute(
-            "UPDATE logs SET date = ?2, time = ?3, location = ?4, tag = ?5, content = ?6 WHERE id = ?1",
+            "UPDATE logs SET date = ?2, time = ?3, location = ?4, tag = ?5, title = ?6, content = ?7 WHERE id = ?1",
             params![
                 entry.id,
                 entry.date.to_string(),
                 entry.time.to_string(),
                 loc_param,
                 entry.tag.as_deref(),
+                entry.title.as_deref(),
                 entry.content
             ],
         )?;
@@ -172,7 +205,7 @@ impl Database {
 
     pub fn get_entries_for_date(&self, date: NaiveDate) -> Result<Vec<LogEntry>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, date, time, location, tag, content FROM logs WHERE date = ? ORDER BY time ASC",
+            "SELECT id, date, time, location, tag, title, content FROM logs WHERE date = ? ORDER BY time ASC",
         )?;
         let rows = stmt.query_map([date.to_string()], |row| {
             Ok(LogEntry {
@@ -181,7 +214,8 @@ impl Database {
                 time: row.get::<_, String>(2)?.parse().unwrap(),
                 location: row.get::<_, Option<String>>(3)?.unwrap_or_default(),
                 tag: row.get(4)?,
-                content: row.get(5)?,
+                title: row.get(5)?,
+                content: row.get(6)?,
             })
         })?;
 
@@ -235,7 +269,7 @@ impl Database {
     /// The "Git-Saver": Dumps the DB to your favorite Markdown format
     pub fn export_to_markdown(&self, path: &Path) -> Result<()> {
         let mut stmt = self.conn.prepare(
-            "SELECT date, time, location, tag, content FROM logs ORDER BY date DESC, time DESC",
+            "SELECT date, time, location, tag, title, content FROM logs ORDER BY date DESC, time DESC",
         )?;
 
         let mut rows = stmt.query([])?;
@@ -246,19 +280,24 @@ impl Database {
             let time: String = row.get(1)?;
             let location: Option<String> = row.get(2)?;
             let tag: Option<String> = row.get(3)?;
-            let body: String = row.get(4)?;
+            let title: Option<String> = row.get(4)?;
+            let body: String = row.get(5)?;
 
             let loc_display = location.unwrap_or_default();
 
+            // Build suffix for tag and title
+            let tag_suffix = match tag {
+                Some(t) => format!(" #{}", t),
+                None => "".to_string(),
+            };
+            let title_suffix = match title {
+                Some(t) => format!(" - {}", t),
+                None => "".to_string(),
+            };
+
             content.push_str(&format!(
-                "## {} {} - {}{}\n\n",
-                date,
-                time,
-                loc_display,
-                match tag {
-                    Some(t) => format!(" #{}", t),
-                    None => "".to_string(),
-                }
+                "## {} {} - {}{}{}\n\n",
+                date, time, loc_display, tag_suffix, title_suffix
             ));
             content.push_str(&body);
             content.push_str("\n\n");

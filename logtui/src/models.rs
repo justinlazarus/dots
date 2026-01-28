@@ -10,6 +10,8 @@ pub struct LogEntry {
     pub time: NaiveTime,
     pub location: String,
     pub tag: Option<String>,
+    // Optional title stored in YAML frontmatter
+    pub title: Option<String>,
     pub content: String,
 }
 

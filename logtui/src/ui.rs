@@ -369,29 +369,104 @@ fn render_daily_view(f: &mut Frame, app: &mut AppState) {
 // date/summary column helpers removed — render_summary_content remains in use.
 
 fn render_combined_header(f: &mut Frame, area: Rect, app: &AppState) {
-    // Month name + date
+    // Build a three-part header: month (left), date (center), mode marker (right)
     let month_name = app.current_date.format("%B").to_string(); // Full month name
     let date_str = app.current_date.format("%Y-%m-%d %A").to_string();
 
-    // Show current tag filter
+    // Mode marker: map AppMode to a short label
+    let mode_label = match &app.mode {
+        crate::models::AppMode::DailyView | crate::models::AppMode::DaySearchView => "Select Date",
+        crate::models::AppMode::SelectEntry => "Select Entry",
+        crate::models::AppMode::EntryView(_) => "View Entry",
+        crate::models::AppMode::ConfirmDelete(_) => "Confirm",
+    }
+    .to_string();
+
+    // Tag indicator shown after the centered date if any filter is active
     let tag_indicator = match &app.current_tag_filter {
         crate::models::TagFilter::All => String::new(),
         crate::models::TagFilter::Tag(tag) => format!("  [#{}]", tag),
         crate::models::TagFilter::Untagged => "  [untagged]".to_string(),
     };
 
-    // Combine: "January  2026-01-26 Sunday  tags..."
-    let header_text = format!("{}  {}{}", month_name, date_str, tag_indicator);
+    // Add horizontal padding inside the bordered header
+    let left_pad = 2usize;
+    let right_pad = 2usize;
 
-    let header = Paragraph::new(header_text)
-        .style(
-            Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::BOLD),
-        )
-        .alignment(Alignment::Center)
-        .block(Block::default().borders(Borders::ALL));
+    // Compute inner width inside borders and subtract padding for layout
+    let inner_width = area.width.saturating_sub(2) as usize;
+    let content_width = inner_width.saturating_sub(left_pad + right_pad);
 
+    // Compute display widths (unicode aware)
+    let month_w = month_name.width();
+    let date_and_tag = format!("{}{}", date_str, tag_indicator);
+    let date_w = date_and_tag.width();
+    let mode_w = mode_label.width();
+
+    // Compute spacing to place date centered and mode right-aligned within content_width
+    let date_start = if content_width > date_w {
+        (content_width - date_w) / 2
+    } else {
+        0
+    };
+    let date_end = date_start + date_w;
+
+    let mut left_space = if date_start > month_w {
+        date_start - month_w
+    } else {
+        1
+    };
+    let mut mode_start = if content_width > mode_w {
+        content_width - mode_w
+    } else {
+        0
+    };
+    let mut right_space = if mode_start > date_end {
+        mode_start - date_end
+    } else {
+        1
+    };
+
+    // If computed spaces exceed available width (overlap), fallback to minimal spacing
+    let total_needed = month_w + left_space + date_w + right_space + mode_w;
+    if total_needed > content_width {
+        left_space = 1;
+        right_space = 1;
+    }
+
+    // Build spans with explicit spacing and padding so each part can have its own style
+    let mut spans: Vec<Span<'static>> = Vec::new();
+    // left padding
+    spans.push(Span::raw(" ".repeat(left_pad)));
+    // month: match the color used for the current day (highlighted day style)
+    spans.push(Span::styled(
+        month_name,
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD),
+    ));
+    spans.push(Span::raw(" ".repeat(left_space)));
+    // centered date + tag
+    spans.push(Span::styled(
+        date_and_tag,
+        Style::default()
+            .fg(Color::White)
+            .add_modifier(Modifier::BOLD),
+    ));
+    spans.push(Span::raw(" ".repeat(right_space)));
+    // mode marker: bright green for visibility
+    spans.push(Span::styled(
+        mode_label,
+        Style::default()
+            .fg(Color::LightGreen)
+            .add_modifier(Modifier::BOLD),
+    ));
+    // right padding
+    spans.push(Span::raw(" ".repeat(right_pad)));
+
+    let text = Text::from(Line::from(spans));
+
+    let header = Paragraph::new(text).block(Block::default().borders(Borders::ALL));
     f.render_widget(header, area);
 }
 
@@ -425,20 +500,27 @@ fn render_entries(f: &mut Frame, area: Rect, app: &mut AppState) {
         let has_tag = entry.tag.as_ref().map(|s| !s.is_empty()).unwrap_or(false);
 
         let first_content = entry.content.lines().next().unwrap_or("").trim();
+        // Prefer explicit frontmatter title when available for previews
+        let preview_text = entry.title.as_deref().unwrap_or(first_content);
 
         // Build a one-line preview according to rules: if both time and tag present, show
         // colored "HH:MM:SS [tag]  content"; otherwise show content only. Ensure the
         // preview uses the same styled spans as the detailed view.
         let mut spans_vec: Vec<Span<'static>> = Vec::new();
 
+        // For visual alignment with the selection view (which reserves a 2-col
+        // marker), add a single leading space in the daily list so items line
+        // up consistently when switching views.
+        spans_vec.push(Span::raw(" "));
+
         // Determine how to produce the content spans (with or without highlighting)
         let content_line: Line<'static> = if !app.day_search_query.is_empty() {
-            highlight_matches(first_content, &app.day_search_query)
+            highlight_matches(preview_text, &app.day_search_query)
         } else {
-            parse_markdown_line(first_content)
+            parse_markdown_line(preview_text)
         };
 
-        if has_time && has_tag && !first_content.is_empty() {
+        if has_time && has_tag && !preview_text.is_empty() {
             // Time (yellow bold)
             spans_vec.push(Span::styled(
                 format!("{} ", entry.time.format("%H:%M:%S")),
@@ -805,8 +887,10 @@ fn render_entry_selection(f: &mut Frame, app: &mut AppState) {
             let mut spans_vec: Vec<Span<'static>> = Vec::new();
 
             // Marker: show a gray bullet for the selected item, otherwise two spaces
+            // Larger selector glyph for better visibility (black circle)
             let marker = if idx == app.selected_entry_index {
-                Span::styled("• ", Style::default().fg(Color::DarkGray))
+                // Use heavy angle for selection marker (modern, crisp)
+                Span::styled("❯ ", Style::default().fg(Color::DarkGray))
             } else {
                 Span::raw("  ")
             };
@@ -835,12 +919,13 @@ fn render_entry_selection(f: &mut Frame, app: &mut AppState) {
                 ));
             }
 
-            // Content preview (first line) parsed as markdown / highlighted
+            // Content preview (prefer title frontmatter when present)
             let first_content = entry.content.lines().next().unwrap_or("").trim();
+            let preview_text = entry.title.as_deref().unwrap_or(first_content);
             let content_line: Line<'static> = if !app.day_search_query.is_empty() {
-                highlight_matches(first_content, &app.day_search_query)
+                highlight_matches(preview_text, &app.day_search_query)
             } else {
-                parse_markdown_line(first_content)
+                parse_markdown_line(preview_text)
             };
             for s in content_line.spans {
                 spans_vec.push(s);
@@ -898,28 +983,17 @@ fn render_entry_detail(f: &mut Frame, app: &mut AppState) {
         let entry = &entries[idx];
 
         // Build a title that mirrors the selection list preview: time, tag,
-        // and the first line of the content. We display that in the block
-        // title area and then render the rest of the entry body below it.
-        let first_line = entry.content.lines().next().unwrap_or("").trim();
+        // and the explicit `title` frontmatter (or fallback to the first
+        // content line). We display that in the block title area and then
+        // render the full entry body below it.
+        let first_content = entry.content.lines().next().unwrap_or("").trim();
         let has_time = entry.time != chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap();
 
-        let title_text = if has_time {
-            if let Some(ref tag) = entry.tag {
-                format!("{} [{}] {}", entry.time.format("%H:%M:%S"), tag, first_line)
-            } else {
-                format!("{} {}", entry.time.format("%H:%M:%S"), first_line)
-            }
-        } else if let Some(ref tag) = entry.tag {
-            format!("[{}] {}", tag, first_line)
-        } else if !first_line.is_empty() {
-            first_line.to_string()
-        } else {
-            entry.location.clone()
-        };
+        let title_display = entry.title.as_deref().unwrap_or(first_content);
 
         let mut text = Text::default();
-        // Render the body (skip the first line because it's already shown in the title).
-        let mut content_lines: Vec<&str> = entry.content.lines().skip(1).collect();
+        // Render the full body (do not skip the first line; title is separate)
+        let mut content_lines: Vec<&str> = entry.content.lines().collect();
         // Trim leading blank lines from the body (users may have left
         // an empty line after the first line when editing).
         if let Some(pos) = content_lines.iter().position(|s| !s.trim().is_empty()) {
@@ -959,9 +1033,9 @@ fn render_entry_detail(f: &mut Frame, app: &mut AppState) {
             ));
         }
 
-        // Title content
+        // Title content (from frontmatter or fallback)
         title_spans.push(Span::styled(
-            first_line.to_string(),
+            title_display.to_string(),
             Style::default().fg(Color::White),
         ));
         // trailing single space after title content
@@ -1041,12 +1115,13 @@ fn render_search_view(f: &mut Frame, app: &AppState) {
             .map(|(idx, (date, entry_idx))| {
                 let entries = app.db.get_entries_for_date(*date).unwrap_or_default();
                 if let Some(entry) = entries.get(*entry_idx) {
-                    let preview = entry.content.lines().next().unwrap_or("");
+                    let first_content = entry.content.lines().next().unwrap_or("");
+                    let preview_text = entry.title.as_deref().unwrap_or(first_content);
                     let content = format!(
                         "{} {} - {}...",
                         date.format("%Y-%m-%d"),
                         entry.time.format("%H:%M"),
-                        preview
+                        preview_text
                     );
 
                     let style = if idx == app.selected_entry_index {

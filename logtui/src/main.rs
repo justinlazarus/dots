@@ -586,16 +586,21 @@ fn handle_create_new_entry<B: ratatui::backend::Backend + Write>(
         "DEBUG: Editor returned: {:?}",
         result
             .as_ref()
-            .map(|(loc, content, tag)| (loc, content.len(), tag))
+            .map(|(d, t, loc, body, tag, title)| (d, t, loc, body.len(), tag, title))
     );
 
-    if let Some((location, content, tag)) = result {
+    if let Some((fm_date_str, fm_time_str, location, content, tag, title)) = result {
+        // Parse date/time from frontmatter and use those for the saved entry
+        let parsed_date: chrono::NaiveDate = fm_date_str.parse().unwrap_or(app.current_date);
+        let parsed_time: chrono::NaiveTime = fm_time_str.parse().unwrap_or(Local::now().time());
+
         let entry = models::LogEntry {
             id: ulid::Ulid::new().to_string(),
-            date: app.current_date,
-            time: Local::now().time(),
+            date: parsed_date,
+            time: parsed_time,
             location,
             tag,
+            title,
             content,
         };
 
@@ -609,7 +614,9 @@ fn handle_create_new_entry<B: ratatui::backend::Backend + Write>(
         // No global last_location tracking — metadata lives in YAML
         eprintln!("DEBUG: Entry saved successfully");
 
-        // Refresh local view
+        // Refresh local view. If entry was saved to a different date, switch to
+        // that date so the newly-created entry is visible.
+        app.current_date = entry.date;
         app.entries = app.db.get_entries_for_date(app.current_date)?;
         eprintln!("DEBUG: Refreshed entries, count: {}", app.entries.len());
     } else {
@@ -633,7 +640,7 @@ fn handle_edit_entry<B: ratatui::backend::Backend + Write>(
         let time_str = entry.time.to_string();
         let day_of_week = entry.date.format("%A").to_string();
 
-        // Pass day_of_week to editor for context, but LogEntry no longer stores it
+        // Pass day_of_week and existing title to editor for context
         let result = editor::edit_existing_entry(
             &date_str,
             &time_str,
@@ -641,9 +648,12 @@ fn handle_edit_entry<B: ratatui::backend::Backend + Write>(
             &entry.location,
             &entry.content,
             entry.tag.as_deref(),
+            entry.title.as_deref(),
         )?;
 
-        if let Some((new_date_str, new_time_str, new_location, new_content, new_tag)) = result {
+        if let Some((new_date_str, new_time_str, new_location, new_content, new_tag, new_title)) =
+            result
+        {
             // Parse the edited values
             let new_date: chrono::NaiveDate = new_date_str.parse()?;
             let new_time: chrono::NaiveTime = new_time_str.parse()?;
@@ -655,6 +665,7 @@ fn handle_edit_entry<B: ratatui::backend::Backend + Write>(
                 time: new_time,
                 location: new_location,
                 tag: new_tag,
+                title: new_title,
                 content: new_content,
             };
 

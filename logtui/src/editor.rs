@@ -20,28 +20,70 @@ fn get_editor() -> String {
     }
 }
 
+// Helper to YAML-quote a value when necessary. Placed at module scope so both
+// edit_new_entry and edit_existing_entry can reuse it.
+fn yaml_quote(s: &str) -> String {
+    if s.is_empty() {
+        return String::new();
+    }
+    // If value contains characters that require quoting, wrap in double quotes
+    if s.starts_with(' ') || s.ends_with(' ') || s.contains(':') || s.contains('"') {
+        let escaped = s.replace('\\', "\\\\").replace('"', "\\\"");
+        return format!("\"{}\"", escaped);
+    }
+    s.to_string()
+}
+
 /// Open external editor for creating a new entry
-/// Returns (location, content, tag) written by the user, or None if cancelled
+/// Returns (location, content, tag, title) written by the user, or None if cancelled
 pub fn edit_new_entry(
     location: Option<String>,
     default_tag: Option<String>,
     date: chrono::NaiveDate,
     _is_today: bool,
-) -> Result<Option<(String, String, Option<String>)>> {
+) -> Result<
+    Option<(
+        String,
+        String,
+        String,
+        String,
+        Option<String>,
+        Option<String>,
+    )>,
+> {
     // Create temp file with .md extension
     let mut temp_file = NamedTempFile::with_suffix(".md").context("Failed to create temp file")?;
 
     let now = Local::now();
 
+    // Helper to YAML-quote a value when necessary
+    fn yaml_quote(s: &str) -> String {
+        if s.is_empty() {
+            return String::new();
+        }
+        // If value contains characters that require quoting, wrap in double quotes
+        if s.starts_with(' ') || s.ends_with(' ') || s.contains(':') || s.contains('"') {
+            let escaped = s.replace('\\', "\\\\").replace('"', "\\\"");
+            return format!("\"{}\"", escaped);
+        }
+        s.to_string()
+    }
+
     // Write YAML frontmatter
     writeln!(temp_file, "---")?;
     writeln!(temp_file, "date: {}", date.format("%Y-%m-%d"))?;
     writeln!(temp_file, "time: {}", now.time().format("%H:%M:%S"))?;
+    // Title field for explicit title in frontmatter (empty by default)
+    writeln!(temp_file, "title: {}", yaml_quote(""))?;
     // Write location even if empty; parser will accept empty location
-    writeln!(temp_file, "location: {}", location.unwrap_or_default())?;
-    if let Some(tag) = default_tag {
-        writeln!(temp_file, "tag: {}", tag)?;
-    }
+    writeln!(
+        temp_file,
+        "location: {}",
+        yaml_quote(&location.unwrap_or_default())
+    )?;
+    // Always include a tag field so user can edit it; default to 'log'
+    let tag_default = default_tag.as_deref().unwrap_or("log");
+    writeln!(temp_file, "tag: {}", yaml_quote(tag_default))?;
     writeln!(temp_file, "---")?;
     writeln!(temp_file)?;
 
@@ -62,12 +104,33 @@ pub fn edit_new_entry(
     // Read back the content
     let content = fs::read_to_string(&temp_path).context("Failed to read temp file")?;
 
-    // Parse YAML frontmatter
-    parse_yaml_frontmatter(&content)
+    // Parse YAML frontmatter and also return date/time from frontmatter
+    if let Some((loc, body, tag, title)) = parse_yaml_frontmatter(&content)? {
+        // Extract frontmatter date/time if present (fallbacks to provided values)
+        // For now we return the date/time strings as written in frontmatter by
+        // parsing the raw content: search for `date:` and `time:` lines.
+        let mut fm_date = date.to_string();
+        let mut fm_time = now.time().format("%H:%M:%S").to_string();
+        for line in content.lines() {
+            let t = line.trim();
+            if t.starts_with("date:") {
+                if let Some(v) = t.splitn(2, ':').nth(1) {
+                    fm_date = v.trim().trim_matches('\"').to_string();
+                }
+            } else if t.starts_with("time:") {
+                if let Some(v) = t.splitn(2, ':').nth(1) {
+                    fm_time = v.trim().trim_matches('\"').to_string();
+                }
+            }
+        }
+
+        return Ok(Some((fm_date, fm_time, loc, body, tag, title)));
+    }
+    Ok(None)
 }
 
 /// Open external editor for editing an existing entry
-/// Returns (date, time, day_of_week, location, content, tag) after editing, or None if cancelled
+/// Returns (date, time, day_of_week, location, content, tag, title) after editing, or None if cancelled
 pub fn edit_existing_entry(
     date_str: &str,
     time_str: &str,
@@ -75,14 +138,28 @@ pub fn edit_existing_entry(
     location: &str,
     content: &str,
     tag: Option<&str>,
-) -> Result<Option<(String, String, String, String, Option<String>)>> {
+    title: Option<&str>,
+) -> Result<
+    Option<(
+        String,
+        String,
+        String,
+        String,
+        Option<String>,
+        Option<String>,
+    )>,
+> {
     // Create temp file with .md extension
     let mut temp_file = NamedTempFile::with_suffix(".md").context("Failed to create temp file")?;
 
-    // Write YAML frontmatter
+    // reuse same yaml_quote helper
+
+    // Write YAML frontmatter (include existing title line when editing)
     writeln!(temp_file, "---")?;
     writeln!(temp_file, "date: {}", date_str)?;
     writeln!(temp_file, "time: {}", time_str)?;
+    // Prefill the title with the provided existing title (if any)
+    writeln!(temp_file, "title: {}", yaml_quote(title.unwrap_or("")))?;
     writeln!(temp_file, "location: {}", location)?;
     if let Some(t) = tag {
         writeln!(temp_file, "tag: {}", t)?;
@@ -108,15 +185,25 @@ pub fn edit_existing_entry(
     // Read back the content
     let edited_content = fs::read_to_string(&temp_path).context("Failed to read temp file")?;
 
-    // Parse YAML and return with original date/time/day
-    if let Some((new_location, new_content, new_tag)) = parse_yaml_frontmatter(&edited_content)? {
-        Ok(Some((
-            date_str.to_string(),
-            time_str.to_string(),
-            new_location,
-            new_content,
-            new_tag,
-        )))
+    // Parse YAML and return date/time extracted from frontmatter if present
+    if let Some((loc, body, tag_res, title_res)) = parse_yaml_frontmatter(&edited_content)? {
+        // Extract frontmatter date/time if present
+        let mut fm_date = date_str.to_string();
+        let mut fm_time = time_str.to_string();
+        for line in edited_content.lines() {
+            let t = line.trim();
+            if t.starts_with("date:") {
+                if let Some(v) = t.splitn(2, ':').nth(1) {
+                    fm_date = v.trim().trim_matches('\"').to_string();
+                }
+            } else if t.starts_with("time:") {
+                if let Some(v) = t.splitn(2, ':').nth(1) {
+                    fm_time = v.trim().trim_matches('\"').to_string();
+                }
+            }
+        }
+
+        Ok(Some((fm_date, fm_time, loc, body, tag_res, title_res)))
     } else {
         Ok(None)
     }
@@ -163,13 +250,11 @@ pub fn edit_summary(date: chrono::NaiveDate, current: &str) -> Result<Option<Str
     Ok(Some(body))
 }
 
-/// Parse edited entry content including datetime
-/// Returns (date, time, day_of_week, location, content, tag) if valid, None if cancelled
-// Old header-based parsing helpers removed — we now use YAML frontmatter
-
 /// Parse the content from the editor, extracting tag from header
 /// Returns (location, content, tag) if valid, None if cancelled
-fn parse_yaml_frontmatter(content: &str) -> Result<Option<(String, String, Option<String>)>> {
+fn parse_yaml_frontmatter(
+    content: &str,
+) -> Result<Option<(String, String, Option<String>, Option<String>)>> {
     let lines: Vec<&str> = content.lines().collect();
 
     // Find YAML frontmatter delimiters more robustly (trimmed)
@@ -184,7 +269,8 @@ fn parse_yaml_frontmatter(content: &str) -> Result<Option<(String, String, Optio
         if content_str.is_empty() {
             return Ok(None);
         }
-        return Ok(Some((String::new(), content_str, None)));
+        // No frontmatter: return location empty, content, no tag, no title
+        return Ok(Some((String::new(), content_str, None, None)));
     }
 
     let start_idx = start_idx_opt.unwrap();
@@ -201,6 +287,7 @@ fn parse_yaml_frontmatter(content: &str) -> Result<Option<(String, String, Optio
     // Parse frontmatter
     let mut location: Option<String> = None;
     let mut tag: Option<String> = None;
+    let mut title: Option<String> = None;
 
     for line in &lines[start_idx + 1..end_idx] {
         if let Some(colon_pos) = line.find(':') {
@@ -217,7 +304,12 @@ fn parse_yaml_frontmatter(content: &str) -> Result<Option<(String, String, Optio
                         tag = Some(value.to_string());
                     }
                 }
-                // ignore `type` field — DB only stores `tag`
+                "title" => {
+                    // Allow empty title -> treat as None
+                    if !value.is_empty() {
+                        title = Some(value.to_string());
+                    }
+                }
                 "date" | "time" => {
                     // We read these but don't use them for new entries
                     // (we use current date/time instead)
@@ -236,14 +328,9 @@ fn parse_yaml_frontmatter(content: &str) -> Result<Option<(String, String, Optio
     // Use empty string for missing location
     let final_location = location.unwrap_or_default();
 
-    // DB only stores `tag`; use tag if present, otherwise None
+    // DB only stores `tag` and now `title`
     let final_tag = tag;
+    let final_title = title;
 
-    Ok(Some((final_location, content_str, final_tag)))
+    Ok(Some((final_location, content_str, final_tag, final_title)))
 }
-
-// Old header-based parsing helpers removed — we now use YAML frontmatter
-
-// Summary editor removed — summary handling moved elsewhere
-
-// old header-based tests removed — parsing now uses YAML frontmatter and should be tested elsewhere
