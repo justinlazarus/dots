@@ -76,6 +76,18 @@ pub struct AppState {
     // --- UI State ---
     pub viewport_height: usize, // Track viewport height for page scrolling
     pub should_quit: bool,
+    // Links extracted from the most recently-rendered entry view. When the
+    // entry detail is rendered we populate this so key handlers can open a
+    // link by index (e.g. press '1' to open the first link).
+    pub last_rendered_links: Vec<String>,
+    // Positions for the last rendered links (absolute terminal coordinates).
+    // Each tuple: (link_index (0-based), row, start_col, end_col)
+    pub last_rendered_link_positions: Vec<(usize, u16, u16, u16)>,
+    // Last detail-area bounding box where links were rendered: (x, y, width, height)
+    pub last_detail_area: Option<(u16, u16, u16, u16)>,
+    // When true, mouse events are passed through to the terminal emulator
+    // (we have called DisableMouseCapture). This allows native selection.
+    pub mouse_passthrough_enabled: bool,
 }
 
 impl AppState {
@@ -98,6 +110,10 @@ impl AppState {
             prev_selected_entry_index: None,
             viewport_height: 10, // Default, will be updated during render
             should_quit: false,
+            last_rendered_links: Vec::new(),
+            last_rendered_link_positions: Vec::new(),
+            last_detail_area: None,
+            mouse_passthrough_enabled: false,
         }
     }
 

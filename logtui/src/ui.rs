@@ -1,5 +1,6 @@
 use crate::models::{AppMode, AppState};
 use chrono::{Datelike, NaiveDate};
+use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -237,6 +238,156 @@ fn parse_markdown_lines(lines: &[&str]) -> Vec<Line<'static>> {
 
     // If the file ended while still in a code block, we just stop — this is fine.
     out
+}
+
+/// Parse multiple markdown lines, collecting links of the form [text](url).
+/// Returns (lines, links) where links is a Vec of discovered URLs in
+/// occurrence order. Links inside fenced code blocks are ignored.
+fn parse_markdown_lines_with_links(lines: &[&str]) -> (Vec<Line<'static>>, Vec<String>) {
+    let mut out: Vec<Line<'static>> = Vec::new();
+    let mut links: Vec<String> = Vec::new();
+    let mut in_code = false;
+
+    for raw in lines.iter() {
+        let s = *raw;
+        let trimmed = s.trim_start();
+        if trimmed.starts_with("```") {
+            in_code = !in_code;
+            continue;
+        }
+
+        if in_code {
+            let code_span = Span::styled(
+                format!("  {}", s),
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::DIM),
+            );
+            out.push(Line::from(vec![code_span]));
+            continue;
+        }
+
+        // We'll scan the line for markdown links [text](url). For each segment
+        // between links, parse with the existing inline parser so bold/italic
+        // and code formatting still apply. Links are rendered as blue underlined
+        // text with a numeric index appended (e.g. "label [1]").
+        let mut spans_for_line: Vec<Span<'static>> = Vec::new();
+        let mut remaining = s;
+
+        while let Some(open_bracket) = remaining.find('[') {
+            // Ensure we have closing bracket and an immediate '(' after )
+            if let Some(close_bracket) = remaining[open_bracket..].find(']') {
+                let close_bracket = open_bracket + close_bracket;
+                // must have '(' after ']'
+                let after = remaining.get(close_bracket + 1..).unwrap_or("");
+                if after.starts_with('(') {
+                    if let Some(close_paren_rel) = after.find(')') {
+                        let close_paren = close_bracket + 1 + close_paren_rel;
+
+                        // before, label, url, after
+                        let before = &remaining[..open_bracket];
+                        let label = &remaining[open_bracket + 1..close_bracket];
+                        // slice url content between '(' and ')' (exclude paren)
+                        let url = &remaining[close_bracket + 2..close_paren];
+
+                        // Parse `before` using inline parser and append spans
+                        if !before.is_empty() {
+                            let parsed_before = parse_markdown_line(before);
+                            for sp in parsed_before.spans {
+                                spans_for_line.push(sp);
+                            }
+                        }
+
+                        // Register link and render label with index
+                        let link_index = links.len() + 1; // 1-based for display
+                        links.push(url.to_string());
+                        spans_for_line.push(Span::styled(
+                            format!("{} [{}]", label, link_index),
+                            Style::default()
+                                .fg(Color::Blue)
+                                .add_modifier(Modifier::UNDERLINED),
+                        ));
+
+                        // Continue parsing after the closing paren
+                        remaining = &remaining[close_paren + 1..];
+                        continue;
+                    }
+                }
+            }
+
+            // No well-formed link found; treat next character literally to avoid
+            // an infinite loop. Append up to the next '[' char and continue.
+            let idx = open_bracket + 1;
+            let literal = &remaining[..idx];
+            let parsed_literal = parse_markdown_line(literal);
+            for sp in parsed_literal.spans {
+                spans_for_line.push(sp);
+            }
+            remaining = &remaining[idx..];
+        }
+
+        // Whatever remains after link processing
+        if !remaining.is_empty() {
+            let parsed_rem = parse_markdown_line(remaining);
+            for sp in parsed_rem.spans {
+                spans_for_line.push(sp);
+            }
+        }
+
+        if spans_for_line.is_empty() {
+            out.push(Line::from(Span::raw("")));
+        } else {
+            out.push(Line::from(spans_for_line));
+        }
+    }
+
+    (out, links)
+}
+
+/// Helper: find and record spans with link indices inside a Line for positioning
+fn record_link_positions(
+    line: &Line<'static>,
+    row: u16,
+    mut col_offset: u16,
+    link_positions: &mut Vec<(usize, u16, u16, u16)>,
+    mut next_link_idx: usize,
+) -> usize {
+    for span in &line.spans {
+        let content = span.content.as_ref();
+        // Look for patterns like "[label]" where label is followed by space and
+        // an index in brackets: "... [N]" produced by our link renderer.
+        // We'll scan the span content to find occurrences of "[<number>]".
+        let mut i = 0usize;
+        while i < content.len() {
+            if let Some(open) = content[i..].find('[') {
+                let open_idx = i + open;
+                if let Some(close_rel) = content[open_idx..].find(']') {
+                    let close_idx = open_idx + close_rel;
+                    let inside = &content[open_idx + 1..close_idx];
+                    if inside.chars().all(|c| c.is_ascii_digit()) {
+                        if let Ok(num) = inside.parse::<usize>() {
+                            // compute byte index -> column width roughly as char count
+                            let start_col = col_offset + content[..open_idx].width() as u16;
+                            let end_col = start_col + content[open_idx..=close_idx].width() as u16;
+                            // store 0-based link index (num - 1)
+                            link_positions.push((num - 1, row, start_col, end_col));
+                            next_link_idx = next_link_idx.max(num);
+                        }
+                    }
+                    i = close_idx + 1;
+                    continue;
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        // advance column offset by span width
+        col_offset += content.width() as u16;
+    }
+    next_link_idx
 }
 
 /// Build a Line from spans truncated to max_width terminal columns. Uses
@@ -1071,10 +1222,24 @@ fn render_entry_detail(f: &mut Frame, app: &mut AppState) {
         // handled across multiple lines instead of parsing each line
         // independently. This ensures code fences toggle correctly and
         // code lines receive the code styling.
-        let parsed = parse_markdown_lines(&content_lines);
+        // Use the link-aware parser for the detail view so we can collect
+        // clickable links and present numeric link indices to the user.
+        let (parsed, links) = parse_markdown_lines_with_links(&content_lines);
         for l in parsed.into_iter() {
             text.lines.push(l);
         }
+
+        // Save discovered links into app state so key handlers can open them.
+        app.last_rendered_links.clear();
+        for url in links.iter() {
+            app.last_rendered_links.push(url.clone());
+        }
+
+        // Record approximate on-screen positions for link indices so mouse
+        // clicks can be mapped to URLs. We'll compute positions relative to the
+        // detail area when the paragraph is rendered below.
+        app.last_rendered_link_positions.clear();
+        app.last_detail_area = None; // will be set by render below
 
         // Build a styled title with left padding and colored time/tag to match
         // the selection list formatting.
@@ -1111,7 +1276,10 @@ fn render_entry_detail(f: &mut Frame, app: &mut AppState) {
         // trailing single space after title content
         title_spans.push(Span::raw(" "));
 
-        let paragraph = Paragraph::new(text)
+        // Clone `text` because we need to inspect its lines for link
+        // position recording before handing ownership to the Paragraph.
+        let text_for_paragraph = text.clone();
+        let paragraph = Paragraph::new(text_for_paragraph)
             .wrap(Wrap { trim: false })
             .scroll((app.scroll_offset, 0))
             .block(
@@ -1120,6 +1288,28 @@ fn render_entry_detail(f: &mut Frame, app: &mut AppState) {
                     .title(Line::from(title_spans))
                     .padding(ratatui::widgets::Padding::uniform(1)),
             );
+
+        // Before rendering, compute link positions relative to the detail area.
+        // We can only approximate horizontal offsets here because ratatui handles
+        // wrapping, but we use the built text lines to compute positions.
+        // Store area so mouse handlers can map clicks later.
+        app.last_detail_area = Some((area.x, area.y, area.width, area.height));
+
+        // For each line we compute the row and call record_link_positions.
+        // paragraph.content is private; instead use the `text` we built earlier.
+        for (i, line) in text.lines.iter().enumerate() {
+            let row = area.y + 1 + i as u16; // 1 for top border/padding
+                                             // column offset: start at area.x + 1 (left border/padding)
+            let col_offset = area.x + 1;
+            let next_idx = 0usize;
+            let _ = record_link_positions(
+                line,
+                row,
+                col_offset,
+                &mut app.last_rendered_link_positions,
+                next_idx,
+            );
+        }
 
         f.render_widget(paragraph, area);
     }

@@ -7,8 +7,11 @@ mod ui;
 
 use anyhow::{Context, Result};
 use chrono::{Datelike, Local};
+use crossterm::event::{
+    self, DisableMouseCapture, EnableMouseCapture, Event as CEvent, KeyCode, MouseButton,
+    MouseEventKind,
+};
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -17,6 +20,7 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 use std::io::Write;
 use std::path::PathBuf;
+use std::process::Command;
 
 fn main() -> Result<()> {
     // 1. Setup Database Path
@@ -84,16 +88,57 @@ fn run_app<B: ratatui::backend::Backend + Write>(
     loop {
         terminal.draw(|f| ui::render(f, app))?;
 
-        if let Event::Key(key) = event::read()? {
-            if key.kind == event::KeyEventKind::Release {
-                continue;
+        match event::read()? {
+            CEvent::Key(key) => {
+                if key.kind == event::KeyEventKind::Release {
+                    continue;
+                }
+                handle_key_event(app, key.code, key.modifiers, terminal)?;
             }
-
-            handle_key_event(app, key.code, key.modifiers, terminal)?;
-
-            if app.should_quit {
-                return Ok(());
+            CEvent::Mouse(mouse) => {
+                // Only handle mouse clicks when in EntryView (detail) mode
+                if let crate::models::AppMode::EntryView(_) = app.mode {
+                    // Map mouse click to link positions recorded during render
+                    if mouse.kind == crossterm::event::MouseEventKind::Down(MouseButton::Left) {
+                        // Check recorded positions
+                        for (idx, row, start_col, end_col) in
+                            app.last_rendered_link_positions.iter()
+                        {
+                            if mouse.row == *row
+                                && mouse.column >= *start_col
+                                && mouse.column <= *end_col
+                            {
+                                // Found a link — open it like numeric handler
+                                if let Some(url) = app.last_rendered_links.get(*idx) {
+                                    suspend_tui(terminal)?;
+                                    let opener = if cfg!(target_os = "macos") {
+                                        "open"
+                                    } else if cfg!(target_os = "windows") {
+                                        "cmd"
+                                    } else {
+                                        "xdg-open"
+                                    };
+                                    if cfg!(target_os = "windows") {
+                                        let _ = Command::new(opener)
+                                            .arg("/C")
+                                            .arg("start")
+                                            .arg(url)
+                                            .spawn();
+                                    } else {
+                                        let _ = Command::new(opener).arg(url).spawn();
+                                    }
+                                    resume_tui(terminal)?;
+                                }
+                            }
+                        }
+                    }
+                }
             }
+            _ => {}
+        }
+
+        if app.should_quit {
+            return Ok(());
         }
     }
 }
@@ -434,6 +479,50 @@ fn handle_entry_view_keys<B: ratatui::backend::Backend + Write>(
     modifiers: event::KeyModifiers,
     terminal: &mut Terminal<B>,
 ) -> Result<()> {
+    // Allow numeric keys to open links discovered in the most recently
+    // rendered entry detail view. '1' opens the first link, '2' the second, etc.
+    if let KeyCode::Char(c) = key {
+        if modifiers.is_empty() && c.is_ascii_digit() {
+            // Map '1'..'9' to 0-based index
+            let idx = match c {
+                '1'..='9' => (c as u8 - b'1') as usize,
+                '0' => 9, // '0' -> 10th link
+                _ => usize::MAX,
+            };
+            if idx != usize::MAX && idx < app.last_rendered_links.len() {
+                let url = app.last_rendered_links[idx].clone();
+                // Suspend TUI while opening the browser so the terminal state is
+                // restored for the external program. We spawn the opener and do
+                // not wait for it to exit.
+                suspend_tui(terminal)?;
+                let opener = if cfg!(target_os = "macos") {
+                    "open"
+                } else if cfg!(target_os = "windows") {
+                    "cmd"
+                } else {
+                    "xdg-open"
+                };
+
+                let res = if cfg!(target_os = "windows") {
+                    // On Windows use: cmd /C start <url>
+                    Command::new(opener)
+                        .arg("/C")
+                        .arg("start")
+                        .arg(&url)
+                        .spawn()
+                } else {
+                    Command::new(opener).arg(&url).spawn()
+                };
+
+                if let Err(e) = res {
+                    eprintln!("Failed to open URL {}: {:?}", url, e);
+                }
+
+                resume_tui(terminal)?;
+                return Ok(());
+            }
+        }
+    }
     match key {
         KeyCode::Char('j') | KeyCode::Down => {
             // When this EntryView was opened from the selection list we
