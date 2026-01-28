@@ -99,6 +99,8 @@ fn handle_key_event<B: ratatui::backend::Backend + Write>(
 ) -> Result<()> {
     match &app.mode {
         AppMode::DailyView => handle_daily_view_keys(app, key, modifiers, terminal),
+        AppMode::EntryView(_) => handle_entry_view_keys(app, key, terminal),
+        AppMode::ConfirmDelete(_) => handle_confirm_delete_keys(app, key, terminal),
         AppMode::SelectEntry => handle_select_entry_keys(app, key, terminal),
         AppMode::SearchView => handle_search_keys(app, key, modifiers),
         AppMode::DaySearchView => handle_day_search_keys(app, key),
@@ -137,9 +139,35 @@ fn handle_daily_view_keys<B: ratatui::backend::Backend + Write>(
             app.scroll_offset = 0;
             app.day_search_query.clear();
         }
-        KeyCode::Char('i') => {
-            // Edit existing entry or create new entry
-            handle_edit_or_create_entry(app, terminal)?;
+        KeyCode::Char('S') => {
+            // Edit summary for the current date
+            suspend_tui(terminal)?;
+
+            let current = app.monthly_summaries.get_summary(&app.current_date);
+            match editor::edit_summary(app.current_date, &current)? {
+                Some(new_text) => {
+                    // Update in-memory and on-disk summaries
+                    app.monthly_summaries
+                        .set_summary(app.current_date, &new_text);
+                    let summary_path = PathBuf::from("summaries.md");
+                    summary::write_summary_file(&summary_path, app.year, &app.monthly_summaries)?;
+                }
+                None => {
+                    // cancelled or editor failed; do nothing
+                }
+            }
+
+            resume_tui(terminal)?;
+        }
+        KeyCode::Enter => {
+            // Enter: open detail entry view for this date or create new if none
+            app.entries = app.db.get_entries_for_date(app.current_date)?;
+            if app.entries.is_empty() {
+                handle_create_new_entry(app, terminal)?;
+            } else {
+                app.selected_entry_index = 0;
+                app.mode = AppMode::EntryView(0);
+            }
         }
         KeyCode::Char('/') => {
             // Day search with highlighting
@@ -201,21 +229,6 @@ fn handle_select_entry_keys<B: ratatui::backend::Backend + Write>(
                 app.selected_entry_index -= 1;
             }
         }
-        KeyCode::Char('x') => {
-            // Delete selected entry (if not the New Entry option)
-            if app.selected_entry_index > 0 {
-                let entry_idx = app.selected_entry_index - 1;
-                if let Some(entry) = app.entries.get(entry_idx) {
-                    app.db.delete_entry(&entry.id)?;
-                    // Refresh entries
-                    app.entries = app.db.get_entries_for_date(app.current_date)?;
-                    // Clamp selected index
-                    if app.selected_entry_index > app.entries.len() {
-                        app.selected_entry_index = app.entries.len();
-                    }
-                }
-            }
-        }
 
         KeyCode::Enter => {
             if app.selected_entry_index == 0 {
@@ -225,6 +238,14 @@ fn handle_select_entry_keys<B: ratatui::backend::Backend + Write>(
                 // Edit existing entry (index - 1 because 0 is "New Entry")
                 let entry_idx = app.selected_entry_index - 1;
                 handle_edit_entry(app, terminal, entry_idx)?;
+            }
+        }
+
+        KeyCode::Char('x') => {
+            // Delete selected entry (if not the New Entry option)
+            if app.selected_entry_index > 0 {
+                let entry_idx = app.selected_entry_index - 1;
+                app.mode = AppMode::ConfirmDelete(entry_idx);
             }
         }
         _ => {}
@@ -310,6 +331,87 @@ fn handle_day_search_keys(app: &mut AppState, key: KeyCode) -> Result<()> {
     Ok(())
 }
 
+fn handle_entry_view_keys<B: ratatui::backend::Backend + Write>(
+    app: &mut AppState,
+    key: KeyCode,
+    terminal: &mut Terminal<B>,
+) -> Result<()> {
+    match key {
+        KeyCode::Char('j') | KeyCode::Down => {
+            let max = app.entries.len();
+            if max > 0 && app.selected_entry_index + 1 < max {
+                app.selected_entry_index += 1;
+            }
+        }
+        KeyCode::Char('k') | KeyCode::Up => {
+            if app.selected_entry_index > 0 {
+                app.selected_entry_index -= 1;
+            }
+        }
+        KeyCode::Enter => {
+            // Edit current entry
+            let idx = app.selected_entry_index;
+            handle_edit_entry(app, terminal, idx)?;
+        }
+        KeyCode::Char('n') => {
+            // New entry for this date
+            handle_create_new_entry(app, terminal)?;
+            // Refresh and move to last entry
+            app.entries = app.db.get_entries_for_date(app.current_date)?;
+            if !app.entries.is_empty() {
+                app.selected_entry_index = app.entries.len() - 1;
+            }
+            app.mode = AppMode::EntryView(app.selected_entry_index);
+        }
+        KeyCode::Char('x') => {
+            // Confirm delete
+            let idx = app.selected_entry_index;
+            app.mode = AppMode::ConfirmDelete(idx);
+        }
+        KeyCode::Esc => {
+            app.mode = AppMode::DailyView;
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn handle_confirm_delete_keys<B: ratatui::backend::Backend + Write>(
+    app: &mut AppState,
+    key: KeyCode,
+    terminal: &mut Terminal<B>,
+) -> Result<()> {
+    match key {
+        KeyCode::Char('y') | KeyCode::Enter => {
+            let idx = match app.mode {
+                AppMode::ConfirmDelete(i) => i,
+                _ => 0,
+            };
+            if let Some(entry) = app.entries.get(idx) {
+                app.db.delete_entry(&entry.id)?;
+            }
+            // Refresh entries and clamp
+            app.entries = app.db.get_entries_for_date(app.current_date)?;
+            if app.entries.is_empty() {
+                app.mode = AppMode::DailyView;
+            } else {
+                app.selected_entry_index = idx.min(app.entries.len() - 1);
+                app.mode = AppMode::EntryView(app.selected_entry_index);
+            }
+        }
+        KeyCode::Char('n') | KeyCode::Esc => {
+            // Cancel
+            if let AppMode::ConfirmDelete(idx) = app.mode {
+                app.mode = AppMode::EntryView(idx);
+            } else {
+                app.mode = AppMode::DailyView;
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
 fn handle_edit_or_create_entry<B: ratatui::backend::Backend + Write>(
     app: &mut AppState,
     terminal: &mut Terminal<B>,
@@ -352,7 +454,6 @@ fn handle_create_new_entry<B: ratatui::backend::Backend + Write>(
             id: ulid::Ulid::new().to_string(),
             date: app.current_date,
             time: Local::now().time(),
-            day_of_week: app.current_date.format("%A").to_string(),
             location,
             tag,
             content,
@@ -392,6 +493,7 @@ fn handle_edit_entry<B: ratatui::backend::Backend + Write>(
         let time_str = entry.time.to_string();
         let day_of_week = entry.date.format("%A").to_string();
 
+        // Pass day_of_week to editor for context, but LogEntry no longer stores it
         let result = editor::edit_existing_entry(
             &date_str,
             &time_str,
@@ -401,15 +503,7 @@ fn handle_edit_entry<B: ratatui::backend::Backend + Write>(
             entry.tag.as_deref(),
         )?;
 
-        if let Some((
-            new_date_str,
-            new_time_str,
-            new_day_of_week,
-            new_location,
-            new_content,
-            new_tag,
-        )) = result
-        {
+        if let Some((new_date_str, new_time_str, new_location, new_content, new_tag)) = result {
             // Parse the edited values
             let new_date: chrono::NaiveDate = new_date_str.parse()?;
             let new_time: chrono::NaiveTime = new_time_str.parse()?;
@@ -419,7 +513,6 @@ fn handle_edit_entry<B: ratatui::backend::Backend + Write>(
                 id: entry.id.clone(),
                 date: new_date,
                 time: new_time,
-                day_of_week: new_day_of_week,
                 location: new_location,
                 tag: new_tag,
                 content: new_content,

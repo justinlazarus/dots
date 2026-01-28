@@ -136,7 +136,6 @@ impl Database {
                 id: row.get(0)?,
                 date: row.get::<_, String>(1)?.parse().unwrap(),
                 time: row.get::<_, String>(2)?.parse().unwrap(),
-                day_of_week: date.format("%A").to_string(),
                 location: row.get::<_, Option<String>>(3)?.unwrap_or_default(),
                 tag: row.get(4)?,
                 content: row.get(5)?,

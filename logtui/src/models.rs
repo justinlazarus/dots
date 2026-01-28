@@ -9,7 +9,6 @@ pub struct LogEntry {
     pub id: String,
     pub date: NaiveDate,
     pub time: NaiveTime,
-    pub day_of_week: String,
     pub location: String,
     pub tag: Option<String>,
     pub content: String,
@@ -19,7 +18,7 @@ impl LogEntry {
     pub fn new(
         date: NaiveDate,
         time: NaiveTime,
-        day_of_week: String,
+        // day_of_week removed; compute from date when needed
         location: String,
         content: String,
     ) -> Self {
@@ -27,7 +26,6 @@ impl LogEntry {
             id: ulid::Ulid::new().to_string(),
             date,
             time,
-            day_of_week,
             location,
             tag: None,
             content,
@@ -41,6 +39,8 @@ pub enum AppMode {
     QuickEntry,
     FullEntry,
     EditEntry(usize),
+    EntryView(usize),
+    ConfirmDelete(usize),
     SelectEntry,
     SearchView,
     DaySearchView,

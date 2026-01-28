@@ -70,8 +70,8 @@ pub fn parse_log_file(content: &str, year: i32) -> Result<HashMap<NaiveDate, Vec
             // Join content lines and trim
             let content = content_lines.join("\n").trim().to_string();
 
-            // Create entry
-            let mut entry = LogEntry::new(date, time, day_of_week, location, content);
+            // Create entry (day_of_week removed from LogEntry; compute from date when needed)
+            let mut entry = LogEntry::new(date, time, location, content);
             entry.tag = tag;
 
             // Add to entries map
@@ -119,7 +119,7 @@ pub fn serialize_entries(entries: &HashMap<NaiveDate, Vec<LogEntry>>, year: i32)
                         "## {} {} {} - {} #{}",
                         entry.date.format("%Y-%m-%d"),
                         entry.time.format("%H:%M:%S"),
-                        entry.day_of_week,
+                        entry.date.format("%A"),
                         entry.location,
                         tag
                     ),
@@ -127,20 +127,20 @@ pub fn serialize_entries(entries: &HashMap<NaiveDate, Vec<LogEntry>>, year: i32)
                         "## {} {} {} - {}",
                         entry.date.format("%Y-%m-%d"),
                         entry.time.format("%H:%M:%S"),
-                        entry.day_of_week,
+                        entry.date.format("%A"),
                         entry.location
                     ),
                     (false, Some(tag)) => format!(
                         "## {} {} - {} #{}",
                         entry.date.format("%Y-%m-%d"),
-                        entry.day_of_week,
+                        entry.date.format("%A"),
                         entry.location,
                         tag
                     ),
                     (false, None) => format!(
                         "## {} {} - {}",
                         entry.date.format("%Y-%m-%d"),
-                        entry.day_of_week,
+                        entry.date.format("%A"),
                         entry.location
                     ),
                 };
@@ -227,7 +227,7 @@ This is a test entry.
         assert_eq!(entry_list.len(), 1);
 
         let entry = &entry_list[0];
-        assert_eq!(entry.day_of_week, "Thursday");
+        assert_eq!(entry.date.format("%A"), "Thursday");
         assert_eq!(entry.location, "Rancho Mirage, CA");
         assert_eq!(entry.content, "This is a test entry.");
     }

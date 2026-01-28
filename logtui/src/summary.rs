@@ -20,6 +20,14 @@ impl MonthlySummaries {
     pub fn get_summary(&self, date: &NaiveDate) -> String {
         self.summaries.get(date).cloned().unwrap_or_default()
     }
+
+    pub fn set_summary(&mut self, date: NaiveDate, text: &str) {
+        if text.trim().is_empty() {
+            self.summaries.remove(&date);
+        } else {
+            self.summaries.insert(date, text.to_string());
+        }
+    }
 }
 
 /// Parse the summary markdown file
@@ -55,6 +63,44 @@ pub fn parse_summary_file(content: &str, year: i32) -> Result<MonthlySummaries> 
     }
 
     Ok(summaries)
+}
+
+/// Write summaries back out to a markdown file in a simple structure
+pub fn write_summary_file(
+    path: &std::path::Path,
+    year: i32,
+    summaries: &MonthlySummaries,
+) -> Result<()> {
+    use std::fs::File;
+    use std::io::Write;
+
+    let mut file = File::create(path).context("Failed to open summary file for writing")?;
+    writeln!(file, "# {} Daily Summaries", year)?;
+    writeln!(file)?;
+
+    // Group by month
+    let mut by_month: std::collections::BTreeMap<u32, Vec<(u32, String)>> =
+        std::collections::BTreeMap::new();
+    for (date, text) in &summaries.summaries {
+        by_month
+            .entry(date.month())
+            .or_default()
+            .push((date.day(), text.clone()));
+    }
+
+    for (month, entries) in by_month {
+        let month_name = chrono::NaiveDate::from_ymd_opt(year, month, 1)
+            .map(|d| d.format("%B").to_string())
+            .unwrap_or_else(|| format!("Month {}", month));
+        writeln!(file, "## {}", month_name)?;
+        writeln!(file)?;
+        for (day, text) in entries {
+            writeln!(file, "- {:02}/{:02} {}", month, day, text)?;
+        }
+        writeln!(file)?;
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

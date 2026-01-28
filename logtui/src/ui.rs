@@ -155,11 +155,16 @@ fn highlight_matches(line: &str, query: &str) -> Line<'static> {
 pub fn render(f: &mut Frame, app: &mut AppState) {
     match &app.mode {
         AppMode::DailyView => render_daily_view(f, app),
+        AppMode::EntryView(_) => render_entry_detail(f, app),
         AppMode::SelectEntry => render_entry_selection(f, app),
         AppMode::SearchView => render_search_view(f, app),
         AppMode::DaySearchView => render_day_search_view(f, app),
+        AppMode::ConfirmDelete(_) => {
+            render_entry_detail(f, app);
+            render_confirm_modal(f, app);
+        }
         AppMode::QuickEntry | AppMode::FullEntry | AppMode::EditEntry(_) => {
-            // External editor is running, nothing to render
+            // External editor is running, render daily view underneath
             render_daily_view(f, app)
         }
     }
@@ -176,30 +181,134 @@ fn render_daily_view(f: &mut Frame, app: &mut AppState) {
         ])
         .split(f.size());
 
-    // Split content row horizontally (50/50)
+    // Split content row horizontally: summary (30%) | detail (70%)
     let content_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(50), // Summary pane
-            Constraint::Percentage(50), // Detail pane
-        ])
+        .constraints([Constraint::Percentage(30), Constraint::Percentage(70)])
         .split(vertical_chunks[1]);
 
-    // Header and footer use full width
+    // Header and footer areas
     let header_area = vertical_chunks[0];
     let footer_area = vertical_chunks[2];
 
-    // Render full-width header
+    // Render header
     render_combined_header(f, header_area, app);
 
-    // Render left column (summary pane)
+    // Left: summary pane (30%) — renders dates + summaries inside
     render_summary_content(f, content_chunks[0], app);
 
-    // Render right column (detail pane) and update viewport height
+    // Right: entries list / detail (70%)
     render_entries(f, content_chunks[1], app);
 
-    // Render full-width footer (help text)
+    // Footer
     render_footer(f, footer_area, app);
+}
+
+fn build_monthly_columns(app: &AppState) -> (Vec<Line<'static>>, Vec<Line<'static>>) {
+    use chrono::Datelike;
+    let current_month = app.current_date.month();
+    let current_year = app.current_date.year();
+
+    let mut date_lines = Vec::new();
+    let mut summary_lines = Vec::new();
+
+    // Calculate content width heuristically; rendering will clip
+    for day in 1..=31 {
+        if let Some(date) = NaiveDate::from_ymd_opt(current_year, current_month, day) {
+            // Build a one-line preview from the first entry of the day if available
+            let entries = app.db.get_entries_for_date(date).unwrap_or_default();
+            let summary = if let Some(first) = entries.first() {
+                // show time (if present) and first content line
+                let has_time = first.time != chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+                let time_str = if has_time {
+                    format!("{} ", first.time.format("%H:%M"))
+                } else {
+                    "".to_string()
+                };
+                let preview = first.content.lines().next().unwrap_or("").trim();
+                format!("{}{}", time_str, preview)
+            } else {
+                "—".to_string()
+            };
+            let is_current = date == app.current_date;
+
+            // Get 2-char day abbreviation
+            let day_abbr = date
+                .format("%a")
+                .to_string()
+                .chars()
+                .take(2)
+                .collect::<String>();
+
+            let date_text = format!("{:02} {}", day, day_abbr);
+            let date_style = if is_current {
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD)
+            } else if summary.is_empty() {
+                Style::default().fg(Color::DarkGray)
+            } else {
+                Style::default()
+            };
+            date_lines.push(Line::from(vec![Span::styled(date_text, date_style)]));
+
+            // Summary column - keep simple: one line or wrapped lines
+            if summary.is_empty() {
+                summary_lines.push(Line::from(""));
+            } else {
+                // naive wrapping: push the whole summary as a single line (wrap happens in UI)
+                let style = if is_current {
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default()
+                };
+                summary_lines.push(Line::from(vec![Span::styled(summary, style)]));
+            }
+
+            // Add blank line after Sunday for visual grouping
+            let is_last_day = day == 31
+                || NaiveDate::from_ymd_opt(current_year, current_month, day + 1).is_none();
+            if date.weekday() == chrono::Weekday::Sun && !is_last_day {
+                date_lines.push(Line::from(""));
+                summary_lines.push(Line::from(""));
+            }
+        } else {
+            break;
+        }
+    }
+
+    (date_lines, summary_lines)
+}
+
+fn render_date_column(f: &mut Frame, area: Rect, app: &AppState) {
+    let (date_lines, _summary_lines) = build_monthly_columns(app);
+    let date_paragraph = Paragraph::new(date_lines)
+        .block(
+            Block::default()
+                .borders(Borders::TOP | Borders::BOTTOM | Borders::LEFT)
+                .padding(ratatui::widgets::Padding::horizontal(1)),
+        )
+        .scroll((0, 0));
+    f.render_widget(date_paragraph, area);
+}
+
+fn render_summary_column(f: &mut Frame, area: Rect, app: &AppState) {
+    let (_date_lines, summary_lines) = build_monthly_columns(app);
+    // Build Text from Lines to ensure proper rendering and wrapping
+    let mut text = Text::default();
+    for line in summary_lines {
+        text.lines.push(line);
+    }
+    let summary_paragraph = Paragraph::new(text)
+        .block(
+            Block::default()
+                .borders(Borders::TOP | Borders::BOTTOM | Borders::RIGHT)
+                .padding(ratatui::widgets::Padding::horizontal(1)),
+        )
+        .scroll((0, 0));
+    f.render_widget(summary_paragraph, area);
 }
 
 fn render_combined_header(f: &mut Frame, area: Rect, app: &AppState) {
@@ -578,8 +687,19 @@ fn render_summary_content(f: &mut Frame, area: Rect, app: &AppState) {
 fn render_footer(f: &mut Frame, area: Rect, app: &AppState) {
     let help_text = match &app.mode {
         AppMode::DailyView => {
-            "[j/k day] [^n/^p month] [h/l tag] [^d/^u page] [i/I edit] [s/^s search] [t today] [q quit]"
+            "[j/k] day  [^n/^p] month  [h/l] tag  [^d/^u] page  [Enter] open  [s/^s] search  [t] today  [q] quit"
         }
+        AppMode::EntryView(_) => {
+            "[j/k] next/prev  [Enter] edit  [n] new  [x] delete  [Esc] back"
+        }
+        AppMode::ConfirmDelete(_) => {
+            "[y/Enter] confirm  [n/Esc] cancel"
+        }
+        AppMode::SelectEntry => {
+            "[j/k] navigate  [Enter] select  [Esc] cancel"
+        }
+        AppMode::SearchView => "^n/^p:navigate Enter:jump Esc:cancel",
+        AppMode::DaySearchView => "Type to filter days  Enter:keep  Esc:cancel",
         _ => "",
     };
 
@@ -700,6 +820,133 @@ fn render_entry_selection(f: &mut Frame, app: &AppState) {
         .alignment(Alignment::Center)
         .block(Block::default().borders(Borders::ALL));
     f.render_widget(footer, chunks[2]);
+}
+
+fn render_entry_detail(f: &mut Frame, app: &mut AppState) {
+    // Layout: header | content | footer
+    let vertical_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3),
+            Constraint::Min(0),
+            Constraint::Length(3),
+        ])
+        .split(f.size());
+
+    // Use same 30/70 split as the daily view: summary (30%) | detail (70%)
+    let content_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(30), Constraint::Percentage(70)])
+        .split(vertical_chunks[1]);
+
+    render_combined_header(f, vertical_chunks[0], app);
+
+    // Left: summary (30%)
+    render_summary_content(f, content_chunks[0], app);
+
+    // Right: single entry detail (70%)
+    let area = content_chunks[1];
+    app.viewport_height = area.height.saturating_sub(4) as usize;
+
+    let entries = app.get_filtered_entries();
+
+    if entries.is_empty() {
+        let no_entries = Paragraph::new("No entries for this day. Press n to create one.")
+            .style(Style::default().fg(Color::DarkGray))
+            .alignment(Alignment::Center)
+            .block(Block::default().borders(Borders::ALL));
+        f.render_widget(no_entries, area);
+    } else {
+        let idx = app.selected_entry_index.min(entries.len() - 1);
+        let entry = &entries[idx];
+
+        // Title indicates entry index
+        let title = format!("Entry {}/{}", idx + 1, entries.len());
+
+        let mut text = Text::default();
+
+        // Header spans for tag/time/location
+        let mut header_spans = Vec::new();
+        if let Some(ref tag) = entry.tag {
+            header_spans.push(Span::styled(
+                format!("[{}] ", tag),
+                Style::default().fg(Color::Cyan),
+            ));
+        }
+
+        let has_time = entry.time != chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+        if has_time {
+            header_spans.push(Span::styled(
+                format!("{} - {}  ", entry.time.format("%H:%M:%S"), entry.location),
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ));
+        } else {
+            header_spans.push(Span::styled(
+                entry.location.clone(),
+                Style::default().fg(Color::Gray),
+            ));
+        }
+
+        // First line combined with header
+        let content_lines: Vec<&str> = entry.content.lines().collect();
+        if content_lines.is_empty() {
+            text.lines.push(Line::from(header_spans));
+        } else {
+            let first = content_lines[0];
+            header_spans.push(Span::raw("  "));
+            for span in parse_markdown_line(first).spans {
+                header_spans.push(span);
+            }
+            text.lines.push(Line::from(header_spans));
+
+            for line in content_lines.iter().skip(1) {
+                text.lines.push(parse_markdown_line(line));
+            }
+        }
+
+        let paragraph = Paragraph::new(text)
+            .wrap(Wrap { trim: false })
+            .scroll((app.scroll_offset as u16, 0))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(title)
+                    .padding(ratatui::widgets::Padding::uniform(1)),
+            );
+
+        f.render_widget(paragraph, area);
+    }
+
+    // Footer for entry view
+    let footer = Paragraph::new("Enter:edit  n:new  x:delete  Esc:back")
+        .style(Style::default().fg(Color::Gray))
+        .alignment(Alignment::Center)
+        .block(Block::default().borders(Borders::ALL));
+    f.render_widget(footer, vertical_chunks[2]);
+}
+
+fn render_confirm_modal(f: &mut Frame, app: &AppState) {
+    // Centered small modal
+    let area = f.size();
+    let w = 50.min(area.width.saturating_sub(4));
+    let h = 5u16.min(area.height.saturating_sub(4));
+    let x = (area.width.saturating_sub(w)) / 2;
+    let y = (area.height.saturating_sub(h)) / 2;
+    let rect = Rect::new(x, y, w, h);
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title("Confirm Delete")
+        .style(Style::default().fg(Color::Red));
+
+    let text = Paragraph::new("Delete this entry? Press y to confirm or n/Esc to cancel")
+        .style(Style::default().fg(Color::White))
+        .alignment(Alignment::Center)
+        .block(block);
+
+    f.render_widget(text, rect);
 }
 
 fn render_search_view(f: &mut Frame, app: &AppState) {

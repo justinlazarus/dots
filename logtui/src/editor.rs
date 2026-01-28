@@ -72,11 +72,11 @@ pub fn edit_new_entry(
 pub fn edit_existing_entry(
     date_str: &str,
     time_str: &str,
-    day_of_week: &str,
+    _day_of_week: &str,
     location: &str,
     content: &str,
     tag: Option<&str>,
-) -> Result<Option<(String, String, String, String, String, Option<String>)>> {
+) -> Result<Option<(String, String, String, String, Option<String>)>> {
     // Create temp file with .md extension
     let mut temp_file = NamedTempFile::with_suffix(".md").context("Failed to create temp file")?;
 
@@ -115,13 +115,56 @@ pub fn edit_existing_entry(
         Ok(Some((
             date_str.to_string(),
             time_str.to_string(),
-            day_of_week.to_string(),
             new_location,
             new_content,
             new_tag,
         )))
     } else {
         Ok(None)
+    }
+}
+
+/// Open external editor for editing a day's summary
+/// Returns Some(text) if saved, None if cancelled
+pub fn edit_summary(date: chrono::NaiveDate, current: &str) -> Result<Option<String>> {
+    let mut temp_file = NamedTempFile::with_suffix(".md").context("Failed to create temp file")?;
+
+    writeln!(temp_file, "# Summary for {}", date.format("%Y-%m-%d"))?;
+    writeln!(temp_file)?;
+    writeln!(temp_file, "{}", current)?;
+    temp_file.flush()?;
+
+    let temp_path = temp_file.path().to_path_buf();
+    let editor = get_editor();
+    let status = Command::new(&editor)
+        .arg(&temp_path)
+        .status()
+        .with_context(|| format!("Failed to launch editor: {}", editor))?;
+
+    if !status.success() {
+        return Ok(None);
+    }
+
+    let content = std::fs::read_to_string(&temp_path).context("Failed to read temp file")?;
+    // Return the whole file as the summary body (strip leading header line if present)
+    let lines: Vec<&str> = content.lines().collect();
+    let body = if !lines.is_empty() && lines[0].trim_start().starts_with('#') {
+        lines
+            .iter()
+            .skip(1)
+            .map(|s| *s)
+            .collect::<Vec<&str>>()
+            .join("\n")
+            .trim()
+            .to_string()
+    } else {
+        content.trim().to_string()
+    };
+
+    if body.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(body))
     }
 }
 
