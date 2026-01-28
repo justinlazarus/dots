@@ -131,6 +131,66 @@ fn handle_daily_view_keys<B: ratatui::backend::Backend + Write>(
     terminal: &mut Terminal<B>,
 ) -> Result<()> {
     match key {
+        // Ctrl+n / Ctrl+p: navigate to next / previous month (clamp day to valid
+        // day in the destination month).
+        KeyCode::Char('n') if modifiers.contains(event::KeyModifiers::CONTROL) => {
+            let cur = app.current_date;
+            let mut year = cur.year();
+            let mut month = cur.month() as i32 + 1; // next month
+            if month > 12 {
+                month = 1;
+                year += 1;
+            }
+            // Try to preserve the day, but clamp to the last valid day of month
+            let day = cur.day();
+            let mut new_date = chrono::NaiveDate::from_ymd_opt(year, month as u32, day);
+            if new_date.is_none() {
+                // decrement day until we find a valid date
+                let mut d = day as i32;
+                while d > 0 {
+                    d -= 1;
+                    if let Some(dt) = chrono::NaiveDate::from_ymd_opt(year, month as u32, d as u32)
+                    {
+                        new_date = Some(dt);
+                        break;
+                    }
+                }
+            }
+            if let Some(dt) = new_date {
+                app.current_date = dt;
+                app.entries = app.db.get_entries_for_date(app.current_date)?;
+                app.scroll_offset = 0;
+                app.day_search_query.clear();
+            }
+        }
+        KeyCode::Char('p') if modifiers.contains(event::KeyModifiers::CONTROL) => {
+            let cur = app.current_date;
+            let mut year = cur.year();
+            let mut month = cur.month() as i32 - 1; // prev month
+            if month < 1 {
+                month = 12;
+                year -= 1;
+            }
+            let day = cur.day();
+            let mut new_date = chrono::NaiveDate::from_ymd_opt(year, month as u32, day);
+            if new_date.is_none() {
+                let mut d = day as i32;
+                while d > 0 {
+                    d -= 1;
+                    if let Some(dt) = chrono::NaiveDate::from_ymd_opt(year, month as u32, d as u32)
+                    {
+                        new_date = Some(dt);
+                        break;
+                    }
+                }
+            }
+            if let Some(dt) = new_date {
+                app.current_date = dt;
+                app.entries = app.db.get_entries_for_date(app.current_date)?;
+                app.scroll_offset = 0;
+                app.day_search_query.clear();
+            }
+        }
         KeyCode::Char('q') => {
             app.should_quit = true;
         }
