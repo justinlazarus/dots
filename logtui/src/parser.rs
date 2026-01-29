@@ -77,6 +77,7 @@ pub fn parse_log_file(content: &str, year: i32) -> Result<HashMap<NaiveDate, Vec
                 time,
                 location,
                 tag,
+                title: None,
                 content,
             };
 

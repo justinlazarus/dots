@@ -8,7 +8,7 @@ use std::process::Command;
 use tempfile::NamedTempFile;
 
 /// Get the editor command from environment or default to nvim
-fn get_editor() -> String {
+pub fn get_editor() -> String {
     let editor = env::var("EDITOR").unwrap_or_else(|_| "nvim".to_string());
 
     // Handle common variations
@@ -251,8 +251,8 @@ pub fn edit_summary(date: chrono::NaiveDate, current: &str) -> Result<Option<Str
 }
 
 /// Parse the content from the editor, extracting tag from header
-/// Returns (location, content, tag) if valid, None if cancelled
-fn parse_yaml_frontmatter(
+/// Returns (location, content, tag, title) if valid, None if cancelled
+pub fn parse_yaml_frontmatter(
     content: &str,
 ) -> Result<Option<(String, String, Option<String>, Option<String>)>> {
     let lines: Vec<&str> = content.lines().collect();
