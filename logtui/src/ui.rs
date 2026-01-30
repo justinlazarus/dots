@@ -987,7 +987,7 @@ fn render_footer(f: &mut Frame, area: Rect, app: &AppState) {
             "[j/k] day  [^n/^p] month  [h/l] tag  [^d/^u] page  [Enter] open  [s/^s] search  [t] today  [i] add summary  [q] quit"
         }
         AppMode::SelectEntry => {
-            "[j/k] navigate  [Enter] open  [n] new  [x] delete  [Esc] cancel"
+            "[j/k] navigate  [Enter] open  [n] new  [x] delete  [Esc] cancel  [^d/^n] page preview"
         }
         AppMode::EntryView(_) => {
             "[j/k] next/prev  [Enter] edit  [n] new  [x] delete  [Esc] back"
@@ -1005,6 +1005,159 @@ fn render_footer(f: &mut Frame, area: Rect, app: &AppState) {
         .block(Block::default().borders(Borders::ALL));
 
     f.render_widget(footer, area);
+}
+
+fn render_entry_list(f: &mut Frame, area: Rect, app: &AppState) {
+    let entries = app.get_filtered_entries();
+    if entries.is_empty() {
+        let no_entries = Paragraph::new("No entries for this day. Press n to create one.")
+            .style(Style::default().fg(Color::DarkGray))
+            .alignment(Alignment::Center)
+            .block(Block::default().borders(Borders::ALL).title("Entries"));
+        f.render_widget(no_entries, area);
+        return;
+    }
+
+    // Build list items using the same formatting as the daily entries
+    // so the preview (time, tag, markdown parsing) matches exactly.
+    let visible_width = area.width.saturating_sub(4) as usize; // account for borders/padding
+    let mut items: Vec<ListItem> = Vec::new();
+
+    for (idx, entry) in entries.iter().enumerate() {
+        let has_time = entry.time != chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+
+        // Build spans for this line following the same rules as render_entries
+        let mut spans_vec: Vec<Span<'static>> = Vec::new();
+
+        // Marker: show a gray bullet for the selected item, otherwise two spaces
+        let marker = if idx == app.selected_entry_index {
+            Span::styled("❯ ", Style::default().fg(Color::DarkGray))
+        } else {
+            Span::raw("  ")
+        };
+        spans_vec.push(marker);
+
+        if has_time {
+            let time_style = if idx == app.selected_entry_index {
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(Color::White)
+            };
+
+            spans_vec.push(Span::styled(
+                format!("{} ", entry.time.format("%H:%M:%S")),
+                time_style,
+            ));
+
+            if let Some(ref tag) = entry.tag {
+                spans_vec.push(Span::styled(
+                    format!("[{}] ", tag),
+                    Style::default().fg(Color::Cyan),
+                ));
+            }
+        } else if let Some(ref tag) = entry.tag {
+            spans_vec.push(Span::styled(
+                format!("[{}] ", tag),
+                Style::default().fg(Color::Cyan),
+            ));
+        }
+
+        // Content preview (prefer title frontmatter when present)
+        let first_content = entry.content.lines().next().unwrap_or("").trim();
+        let preview_text = entry.title.as_deref().unwrap_or(first_content);
+        let content_line: Line<'static> = if !app.day_search_query.is_empty() {
+            highlight_matches(preview_text, &app.day_search_query)
+        } else {
+            parse_markdown_line(preview_text)
+        };
+        for s in content_line.spans {
+            spans_vec.push(s);
+        }
+
+        // Truncate to fit visible width (subtract marker length already included)
+        let line = build_truncated_line(spans_vec, visible_width);
+        items.push(ListItem::new(line));
+    }
+
+    let list = List::new(items).block(Block::default().borders(Borders::ALL).title("Entries"));
+    f.render_widget(list, area);
+}
+
+fn render_entry_preview(f: &mut Frame, area: Rect, app: &mut AppState) {
+    let entries = app.get_filtered_entries();
+    if entries.is_empty() {
+        let no_preview = Paragraph::new("No preview available")
+            .style(Style::default().fg(Color::DarkGray))
+            .alignment(Alignment::Center)
+            .block(Block::default().borders(Borders::ALL).title("Preview"));
+        f.render_widget(no_preview, area);
+        return;
+    }
+
+    let idx = app.selected_entry_index.min(entries.len() - 1);
+    let entry = &entries[idx];
+
+    // Compute preview viewport height (subtract borders/padding) and store
+    // it in the app state so key handlers can page using the correct size.
+    let preview_viewport = area.height.saturating_sub(4) as usize;
+    app.preview_viewport_height = preview_viewport;
+
+    // Build body using markdown parser (no link registration)
+    let mut content_lines: Vec<&str> = entry.content.lines().collect();
+    if let Some(pos) = content_lines.iter().position(|s| !s.trim().is_empty()) {
+        content_lines = content_lines.into_iter().skip(pos).collect();
+    } else {
+        content_lines.clear();
+    }
+
+    let parsed = parse_markdown_lines(&content_lines);
+    let mut text = Text::default();
+    for l in parsed.into_iter() {
+        text.lines.push(l);
+    }
+
+    // Remove any leading empty lines so the preview content starts directly
+    // below the top border (we already removed vertical padding).
+    while let Some(first) = text.lines.first() {
+        let empty = first
+            .spans
+            .iter()
+            .all(|s| s.content.as_ref().trim().is_empty());
+        if empty {
+            text.lines.remove(0);
+        } else {
+            break;
+        }
+    }
+
+    // Clamp preview_scroll_offset to a valid range based on content height.
+    let total_lines = text.lines.len();
+    let max_scroll = if total_lines > preview_viewport {
+        total_lines - preview_viewport
+    } else {
+        0
+    };
+    if (app.preview_scroll_offset as usize) > max_scroll {
+        app.preview_scroll_offset = max_scroll as u16;
+    }
+
+    // Create paragraph with scroll using app.preview_scroll_offset. Do not
+    // render any title in the block margin or as the first content line; the
+    // select list already shows time/tag/title.
+    let paragraph = Paragraph::new(text)
+        .wrap(Wrap { trim: false })
+        .scroll((app.preview_scroll_offset, 0))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                // Keep horizontal padding but remove vertical padding so the
+                // preview content sits directly beneath the top border.
+                .padding(ratatui::widgets::Padding::horizontal(1)),
+        );
+
+    f.render_widget(paragraph, area);
 }
 
 fn render_day_search_view(f: &mut Frame, app: &mut AppState) {
@@ -1075,86 +1228,14 @@ fn render_entry_selection(f: &mut Frame, app: &mut AppState) {
 
     // Right: selection list
     let right_area = content_chunks[1];
-    let entries = app.get_filtered_entries();
-    if entries.is_empty() {
-        let no_entries = Paragraph::new("No entries for this day. Press n to create one.")
-            .style(Style::default().fg(Color::DarkGray))
-            .alignment(Alignment::Center)
-            .block(Block::default().borders(Borders::ALL));
-        f.render_widget(no_entries, right_area);
-    } else {
-        // Build list items using the same formatting as the daily entries
-        // so the preview (time, tag, markdown parsing) matches exactly.
-        let visible_width = right_area.width.saturating_sub(4) as usize; // account for borders/padding
-        let mut items: Vec<ListItem> = Vec::new();
+    // split right area vertically into top list (30%) and bottom preview (70%)
+    let right_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Percentage(30), Constraint::Percentage(70)])
+        .split(right_area);
 
-        for (idx, entry) in entries.iter().enumerate() {
-            let has_time = entry.time != chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap();
-
-            // Build spans for this line following the same rules as render_entries
-            let mut spans_vec: Vec<Span<'static>> = Vec::new();
-
-            // Marker: show a gray bullet for the selected item, otherwise two spaces
-            // Larger selector glyph for better visibility (black circle)
-            let marker = if idx == app.selected_entry_index {
-                // Use heavy angle for selection marker (modern, crisp)
-                Span::styled("❯ ", Style::default().fg(Color::DarkGray))
-            } else {
-                Span::raw("  ")
-            };
-            // reserve marker width (2 columns)
-            spans_vec.push(marker);
-
-            // Time and tag formatting
-            if has_time {
-                // Highlight time only for the currently selected entry to match
-                // the date selection pane (selected -> yellow bold).
-                let time_style = if idx == app.selected_entry_index {
-                    Style::default()
-                        .fg(Color::Yellow)
-                        .add_modifier(Modifier::BOLD)
-                } else {
-                    Style::default().fg(Color::White)
-                };
-
-                spans_vec.push(Span::styled(
-                    format!("{} ", entry.time.format("%H:%M:%S")),
-                    time_style,
-                ));
-
-                if let Some(ref tag) = entry.tag {
-                    spans_vec.push(Span::styled(
-                        format!("[{}] ", tag),
-                        Style::default().fg(Color::Cyan),
-                    ));
-                }
-            } else if let Some(ref tag) = entry.tag {
-                spans_vec.push(Span::styled(
-                    format!("[{}] ", tag),
-                    Style::default().fg(Color::Cyan),
-                ));
-            }
-
-            // Content preview (prefer title frontmatter when present)
-            let first_content = entry.content.lines().next().unwrap_or("").trim();
-            let preview_text = entry.title.as_deref().unwrap_or(first_content);
-            let content_line: Line<'static> = if !app.day_search_query.is_empty() {
-                highlight_matches(preview_text, &app.day_search_query)
-            } else {
-                parse_markdown_line(preview_text)
-            };
-            for s in content_line.spans {
-                spans_vec.push(s);
-            }
-
-            // Truncate to fit visible width (subtract marker length already included)
-            let line = build_truncated_line(spans_vec, visible_width);
-            items.push(ListItem::new(line));
-        }
-
-        let list = List::new(items).block(Block::default().borders(Borders::ALL));
-        f.render_widget(list, right_area);
-    }
+    render_entry_list(f, right_chunks[0], app);
+    render_entry_preview(f, right_chunks[1], app);
 
     // Footer for selection view
     render_footer(f, vertical_chunks[2], app);

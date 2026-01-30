@@ -88,6 +88,11 @@ pub struct AppState {
     // When true, mouse events are passed through to the terminal emulator
     // (we have called DisableMouseCapture). This allows native selection.
     pub mouse_passthrough_enabled: bool,
+    // --- Preview pane state (SelectEntry mode) ---
+    // Vertical scroll offset for the preview pane (lines)
+    pub preview_scroll_offset: u16,
+    // Height of the preview viewport in lines (set during render)
+    pub preview_viewport_height: usize,
 }
 
 impl AppState {
@@ -116,6 +121,8 @@ impl AppState {
             // We never enable mouse capture; leave passthrough enabled so the
             // terminal emulator handles mouse selection and clicks.
             mouse_passthrough_enabled: true,
+            preview_scroll_offset: 0,
+            preview_viewport_height: 10,
         }
     }
 

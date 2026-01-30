@@ -139,7 +139,7 @@ fn handle_key_event<B: ratatui::backend::Backend + Write>(
 fn handle_select_entry_keys<B: ratatui::backend::Backend + Write>(
     app: &mut AppState,
     key: KeyCode,
-    _modifiers: event::KeyModifiers,
+    modifiers: event::KeyModifiers,
     terminal: &mut Terminal<B>,
 ) -> Result<()> {
     let entries_len = app.get_filtered_entries().len();
@@ -148,11 +148,15 @@ fn handle_select_entry_keys<B: ratatui::backend::Backend + Write>(
         KeyCode::Char('j') | KeyCode::Down => {
             if entries_len > 0 && app.selected_entry_index + 1 < entries_len {
                 app.selected_entry_index += 1;
+                // reset preview scroll when selection changes
+                app.preview_scroll_offset = 0;
             }
         }
         KeyCode::Char('k') | KeyCode::Up => {
             if app.selected_entry_index > 0 {
                 app.selected_entry_index -= 1;
+                // reset preview scroll when selection changes
+                app.preview_scroll_offset = 0;
             }
         }
         KeyCode::Enter => {
@@ -173,6 +177,7 @@ fn handle_select_entry_keys<B: ratatui::backend::Backend + Write>(
                 app.selected_entry_index = app.entries.len() - 1;
             }
             app.mode = AppMode::SelectEntry;
+            app.preview_scroll_offset = 0;
         }
         KeyCode::Char('x') => {
             // Request delete for currently selected index and remember origin
@@ -328,19 +333,25 @@ fn handle_daily_view_keys<B: ratatui::backend::Backend + Write>(
             app.mode = AppMode::DaySearchView;
         }
         KeyCode::Char('d') if modifiers.contains(event::KeyModifiers::CONTROL) => {
-            // Ctrl+d: Scroll down one page
-            app.scroll_offset = app.scroll_offset.saturating_add(app.viewport_height as u16);
+            // Ctrl+d: page-down preview pane
+            let page = app.preview_viewport_height as u16;
+            app.preview_scroll_offset = app.preview_scroll_offset.saturating_add(page);
+        }
+        KeyCode::Char('n') if modifiers.contains(event::KeyModifiers::CONTROL) => {
+            // Ctrl+n: page-up preview pane
+            let page = app.preview_viewport_height as u16;
+            app.preview_scroll_offset = app.preview_scroll_offset.saturating_sub(page);
         }
         KeyCode::Char('u') if modifiers.contains(event::KeyModifiers::CONTROL) => {
-            // Ctrl+u: Scroll up one page
+            // Keep Ctrl+u behavior for scrolling the list as well
             app.scroll_offset = app.scroll_offset.saturating_sub(app.viewport_height as u16);
         }
         KeyCode::Char('d') => {
-            // Scroll down one line
+            // Scroll down list one line
             app.scroll_offset = app.scroll_offset.saturating_add(1);
         }
         KeyCode::Char('u') => {
-            // Scroll up one line
+            // Scroll up list one line
             app.scroll_offset = app.scroll_offset.saturating_sub(1);
         }
         KeyCode::Down => {
