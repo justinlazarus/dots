@@ -90,7 +90,46 @@ bindsym XF86MonBrightnessUp exec brightnessctl set 5%+
 bindsym XF86MonBrightnessDown exec brightnessctl set 5%-
 EOF
 
-# 7. MULTIMEDIA CODECS
+# 7. FONTS
+echo "🔤 Installing 0xProto Nerd Font..."
+mkdir -p ~/.local/share/fonts/0xProto
+curl -Lo /tmp/0xProto.zip https://github.com/ryanoasis/nerd-fonts/releases/latest/download/0xProto.zip
+unzip -o /tmp/0xProto.zip -d ~/.local/share/fonts/0xProto
+rm -f /tmp/0xProto.zip
+fc-cache -fv
+
+# 8. GHOSTTY TERMINAL
+echo "👻 Installing Ghostty terminal..."
+sudo dnf copr enable -y pgdev/ghostty
+sudo dnf install -y ghostty
+
+# Symlink Ghostty config
+mkdir -p ~/.config/ghostty
+ln -sf ~/dots/ghostty/config ~/.config/ghostty/config
+
+# 8. SWAY CONFIG
+echo "🪟 Symlinking sway config..."
+ln -sf ~/dots/fed/sway-config ~/.config/sway/config
+mkdir -p ~/.config/waybar
+ln -sf ~/dots/fed/waybar/config.jsonc ~/.config/waybar/config.jsonc
+ln -sf ~/dots/fed/waybar/style.css ~/.config/waybar/style.css
+
+# 9. DOTFILE SYMLINKS (zsh, tmux, neovim)
+echo "🔗 Symlinking zsh, tmux, and neovim configs..."
+ln -sf ~/dots/.zshrc ~/.zshrc
+mkdir -p ~/.config/tmux
+ln -sf ~/dots/tmux/tmux.conf ~/.config/tmux/tmux.conf
+mkdir -p ~/.config/nvim
+ln -sf ~/dots/nvim/init.lua ~/.config/nvim/init.lua
+ln -sfn ~/dots/nvim/lua ~/.config/nvim/lua
+ln -sfn ~/dots/nvim/lsp ~/.config/nvim/lsp
+
+# 10. GITMUX (tmux git status)
+echo "📊 Installing gitmux..."
+go install github.com/arl/gitmux@latest
+cp ~/go/bin/gitmux ~/.local/bin/gitmux
+
+# 11. MULTIMEDIA CODECS
 echo "🎬 Installing Hardware Codecs..."
 sudo dnf swap -y ffmpeg-free ffmpeg --allowerasing
 sudo dnf install -y gstreamer1-plugins-ugly gstreamer1-plugins-bad-free-extras freetype-freeworld

@@ -7,55 +7,37 @@ vim.pack.add {
   'https://github.com/folke/lazydev.nvim',
   'https://github.com/saghen/blink.cmp',
   -- roslyn.nvim loaded manually below (see roslyn section)
-  'https://github.com/catppuccin/nvim',
+  'https://github.com/folke/tokyonight.nvim',
   'https://github.com/stevearc/conform.nvim',
   'https://github.com/lewis6991/gitsigns.nvim',
   'https://github.com/echasnovski/mini.statusline',
   'https://github.com/nvim-tree/nvim-web-devicons',
   'https://github.com/stevearc/oil.nvim',
-  'https://github.com/nvim-lua/plenary.nvim.git',
 }
 
 --------------------------------------------------------------------------------------------------- treesitter
 
-require('nvim-treesitter.configs').setup {
-  ensure_installed = {
-    'bash',
-    'c_sharp',
-    'css',
-    'diff',
-    'html',
-    'javascript',
-    'json',
-    'lua',
-    'markdown',
-    'powershell',
-    'tsx',
-    'typescript',
-    'vim',
-    'vimdoc',
-    'xml',
-    'yaml',
-  },
-  sync_install = false,
-  auto_install = true,
-  highlight = {
-    enable = true,
-    additional_vim_regex_highlighting = false,
-  },
-  indent = { enable = true },
-  incremental_selection = {
-    enable = true,
-    keymaps = {
-      init_selection = 'gnn',
-      node_incremental = 'grn',
-      scope_incremental = 'grc',
-      node_decremental = 'grm',
-    },
-  },
-}
+require('nvim-treesitter.install').install({
+  'bash',
+  'c_sharp',
+  'css',
+  'diff',
+  'html',
+  'javascript',
+  'json',
+  'lua',
+  'markdown',
+  'powershell',
+  'tsx',
+  'typescript',
+  'vim',
+  'vimdoc',
+  'xml',
+  'yaml',
+}, { summary = false })
 
-require('nvim-treesitter.install').update { with_sync = true }
+-- Use bash parser for zsh files (no dedicated zsh parser exists)
+vim.treesitter.language.register('bash', 'zsh')
 
 -------------------------------------------------------------------------------------------------------- mason
 
@@ -86,6 +68,12 @@ vim.schedule(function()
   ensure_installed 'typescript-language-server' -- ts_ls
   ensure_installed 'json-lsp' -- jsonls
   ensure_installed 'roslyn' -- C#/.NET (via third-party registry)
+  ensure_installed 'angular-language-server' -- angular
+  ensure_installed 'csharpier' -- C# formatter
+  ensure_installed 'sqlfmt' -- SQL formatter
+  ensure_installed 'stylua' -- Lua formatter
+  ensure_installed 'terraform-ls' -- Terraform
+  ensure_installed 'rust-analyzer' -- Rust
 end)
 
 ------------------------------------------------------------------------------------------------------- snacks
@@ -300,14 +288,10 @@ require('oil').setup {
 
 require('blink.cmp').setup {
   enabled = function()
-    return vim.bo.filetype ~= "markdown"
+    return vim.bo.filetype ~= 'markdown'
   end,
   fuzzy = {
-    prebuilt_binaries = {
-      -- Use prebuilt binaries for the fuzzy matcher
-      download = true,
-      force_version = nil, -- Uses latest compatible version
-    },
+    implementation = 'prefer_rust',
   },
 }
 
@@ -408,18 +392,10 @@ vim.cmd 'runtime! plugin/roslyn.lua'
 -- 4. Setup roslyn options
 require('roslyn').setup {}
 
----------------------------------------------------------------------------------------------------- catppuccin
+-------------------------------------------------------------------------------------------------- tokyonight
 
-require('catppuccin').setup {
-  flavour = 'mocha', -- latte, frappe, macchiato, mocha
-  transparent_background = false,
-  integrations = {
-    cmp = true,
-    gitsigns = true,
-    treesitter = true,
-    mason = true,
-    which_key = true,
-  },
+require('tokyonight').setup {
+  style = 'storm',
 }
 
-vim.cmd.colorscheme 'catppuccin'
+vim.cmd.colorscheme 'tokyonight-storm'
