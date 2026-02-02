@@ -270,6 +270,7 @@ wk.add {
   { '<leader>f', group = 'Find' },
   { '<leader>g', group = 'Git' },
   { '<leader>s', group = 'Search' },
+  { '<leader>c', group = 'Code' },
   { '<leader>d', group = 'Dotnet/NX' },
   { '<leader>t', group = 'Toggle' },
   { '<leader>u', group = 'UI' },
@@ -316,7 +317,7 @@ require('conform').setup {
   formatters_by_ft = { lua = { 'stylua' }, cs = { 'csharpier' } },
 }
 
-vim.keymap.set('n', '<leader>f', function()
+vim.keymap.set('n', '<leader>cf', function()
   require('conform').format { async = true, lsp_format = 'fallback' }
 end, { desc = 'Format buffer' })
 

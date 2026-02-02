@@ -114,8 +114,9 @@ mkdir -p ~/.config/waybar
 ln -sf ~/dots/fed/waybar/config.jsonc ~/.config/waybar/config.jsonc
 ln -sf ~/dots/fed/waybar/style.css ~/.config/waybar/style.css
 
-# 9. DOTFILE SYMLINKS (zsh, tmux, neovim)
-echo "🔗 Symlinking zsh, tmux, and neovim configs..."
+# 9. DOTFILE SYMLINKS (git, zsh, tmux, neovim)
+echo "🔗 Symlinking git, zsh, tmux, and neovim configs..."
+ln -sf ~/dots/.gitconfig ~/.gitconfig
 ln -sf ~/dots/.zshrc ~/.zshrc
 mkdir -p ~/.config/tmux
 ln -sf ~/dots/tmux/tmux.conf ~/.config/tmux/tmux.conf

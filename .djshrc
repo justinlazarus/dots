@@ -105,3 +105,4 @@ PROMPT='[ %F{#9ece6a}%n%f :: %~ ] '
 # Local overrides (secrets, work env, certs)
 # =========================================
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
+export PATH="$HOME/.local/bin:$PATH"
