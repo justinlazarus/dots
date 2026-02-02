@@ -17,28 +17,26 @@ vim.pack.add {
 
 --------------------------------------------------------------------------------------------------- treesitter
 
---------------------------------------------------------------------------------------------------- treesitter
+require('nvim-treesitter.install').install({
+  'bash',
+  'c_sharp',
+  'css',
+  'diff',
+  'html',
+  'javascript',
+  'json',
+  'lua',
+  'markdown',
+  'powershell',
+  'tsx',
+  'typescript',
+  'vim',
+  'vimdoc',
+  'xml',
+  'yaml',
+}, { summary = false })
 
-require('nvim-treesitter.configs').setup({
-  -- A list of parser names, or "all"
-  ensure_installed = {
-    'bash', 'c_sharp', 'css', 'diff', 'html', 'javascript', 
-    'json', 'lua', 'markdown', 'powershell', 'tsx', 
-    'typescript', 'vim', 'vimdoc', 'xml', 'yaml'
-  },
-
-  -- Install parsers synchronously (only applied to `ensure_installed`)
-  sync_install = false,
-
-  -- Automatically install missing parsers when entering buffer
-  auto_install = true,
-
-  highlight = {
-    enable = true, -- HIGHLY recommended to actually see the treesitter colors
-  },
-})
-
--- Use bash parser for zsh files
+-- Use bash parser for zsh files (no dedicated zsh parser exists)
 vim.treesitter.language.register('bash', 'zsh')
 
 -------------------------------------------------------------------------------------------------------- mason
