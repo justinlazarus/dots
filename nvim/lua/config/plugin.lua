@@ -6,7 +6,7 @@ vim.pack.add {
   'https://github.com/L3MON4D3/LuaSnip',
   'https://github.com/folke/lazydev.nvim',
   'https://github.com/saghen/blink.cmp',
-  -- roslyn.nvim loaded manually below (see roslyn section)
+  'https://github.com/seblyng/roslyn.nvim',
   'https://github.com/folke/tokyonight.nvim',
   'https://github.com/stevearc/conform.nvim',
   'https://github.com/lewis6991/gitsigns.nvim',
@@ -311,7 +311,7 @@ require('conform').setup {
       return nil
     end
 
-    return { timeout_ms = 500, lsp_format = 'fallback' }
+    return { timeout_ms = 3000, lsp_format = 'fallback' }
   end,
   formatters_by_ft = { lua = { 'stylua' }, cs = { 'csharpier' } },
 }
@@ -371,25 +371,6 @@ require('mini.statusline').setup {
 
 ------------------------------------------------------------------------------------------------------- roslyn
 
--- Roslyn.nvim needs special handling with vim.pack
--- We need to register the LSP config BEFORE plugin files run
-
--- 1. Manually add to runtimepath without loading plugins
-local roslyn_path = vim.fn.stdpath 'data' .. '/site/pack/core/opt/roslyn.nvim'
-vim.opt.runtimepath:append(roslyn_path)
-
--- 2. Load and register the LSP config
-local ok, roslyn_config = pcall(dofile, roslyn_path .. '/lsp/roslyn.lua')
-if ok and roslyn_config then
-  vim.lsp.config('roslyn', roslyn_config)
-else
-  vim.notify('Failed to load roslyn LSP config: ' .. tostring(roslyn_config), vim.log.levels.ERROR)
-end
-
--- 3. Source the plugin file manually to register commands etc
-vim.cmd 'runtime! plugin/roslyn.lua'
-
--- 4. Setup roslyn options
 require('roslyn').setup {}
 
 -------------------------------------------------------------------------------------------------- tokyonight
