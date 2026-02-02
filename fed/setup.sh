@@ -107,12 +107,19 @@ sudo dnf install -y ghostty
 mkdir -p ~/.config/ghostty
 ln -sf ~/dots/ghostty/config ~/.config/ghostty/config
 
-# 8. SWAY CONFIG
-echo "🪟 Symlinking sway config..."
+# 8. SWAY + WAYBAR + ROFI + DUNST + SWAYLOCK CONFIG
+echo "🪟 Symlinking sway, waybar, rofi, dunst, swaylock configs..."
 ln -sf ~/dots/fed/sway-config ~/.config/sway/config
 mkdir -p ~/.config/waybar
 ln -sf ~/dots/fed/waybar/config.jsonc ~/.config/waybar/config.jsonc
 ln -sf ~/dots/fed/waybar/style.css ~/.config/waybar/style.css
+mkdir -p ~/.config/rofi
+ln -sf ~/dots/fed/rofi/config.rasi ~/.config/rofi/config.rasi
+ln -sf ~/dots/fed/rofi/tokyonight.rasi ~/.config/rofi/tokyonight.rasi
+mkdir -p ~/.config/dunst
+ln -sf ~/dots/fed/dunst/dunstrc ~/.config/dunst/dunstrc
+mkdir -p ~/.config/swaylock
+ln -sf ~/dots/fed/swaylock/config ~/.config/swaylock/config
 
 # 9. DOTFILE SYMLINKS (git, zsh, tmux, neovim)
 echo "🔗 Symlinking git, zsh, tmux, and neovim configs..."
@@ -130,7 +137,27 @@ echo "📊 Installing gitmux..."
 go install github.com/arl/gitmux@latest
 cp ~/go/bin/gitmux ~/.local/bin/gitmux
 
-# 11. MULTIMEDIA CODECS
+# 11. GTK THEME, ICONS & CURSOR
+echo "🎨 Installing Tokyo Night GTK theme, Papirus icons, Bibata cursor..."
+sudo dnf install -y sassc papirus-icon-theme
+git clone https://github.com/Fausto-Korpsvart/Tokyo-Night-GTK-Theme.git /tmp/tokyonight-gtk
+/tmp/tokyonight-gtk/themes/install.sh -c dark --tweaks storm outline -l
+rm -rf /tmp/tokyonight-gtk
+
+# Bibata cursor
+curl -sL https://github.com/ful1e5/Bibata_Cursor/releases/latest/download/Bibata-Modern-Classic.tar.xz -o /tmp/bibata.tar.xz
+mkdir -p ~/.local/share/icons
+tar xf /tmp/bibata.tar.xz -C ~/.local/share/icons/
+rm -f /tmp/bibata.tar.xz
+
+# Apply themes
+gsettings set org.gnome.desktop.interface gtk-theme "Tokyonight-Dark-Storm"
+gsettings set org.gnome.desktop.interface color-scheme "prefer-dark"
+gsettings set org.gnome.desktop.interface icon-theme "Papirus-Dark"
+gsettings set org.gnome.desktop.interface cursor-theme "Bibata-Modern-Classic"
+gsettings set org.gnome.desktop.interface cursor-size 24
+
+# 13. MULTIMEDIA CODECS
 echo "🎬 Installing Hardware Codecs..."
 sudo dnf swap -y ffmpeg-free ffmpeg --allowerasing
 sudo dnf install -y gstreamer1-plugins-ugly gstreamer1-plugins-bad-free-extras freetype-freeworld

@@ -265,6 +265,9 @@ input "type:keyboard" {
     xkb_options ctrl:nocaps
 }
 
+# Cursor
+seat seat0 xcursor_theme Bibata-Modern-Classic 24
+
 # Keyboard Backlight
 bindsym --locked XF86KbdBrightnessUp exec brightnessctl -d 'smc::kbd_backlight' set 5%+
 bindsym --locked XF86KbdBrightnessDown exec brightnessctl -d 'smc::kbd_backlight' set 5%-
