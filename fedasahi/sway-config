@@ -268,3 +268,4 @@ seat seat0 xcursor_theme Bibata-Modern-Classic 24
 
 # Autostart
 exec waybar
+exec nm-applet

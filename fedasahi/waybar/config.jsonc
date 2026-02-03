@@ -12,7 +12,6 @@
         "pulseaudio",
         "backlight",
         "battery",
-        "network",
         "clock",
         "tray"
     ],
@@ -48,12 +47,6 @@
             "󰂂",
             "󰁹"
         ]
-    },
-    "network": {
-        "format-wifi": "󰤨  {essid}",
-        "format-ethernet": "󰈀  {ipaddr}",
-        "format-disconnected": "󰤭  off",
-        "tooltip-format": "{ifname}: {ipaddr}/{cidr} via {gwaddr}"
     },
     "pulseaudio": {
         "format": "{icon}  {volume}%",
