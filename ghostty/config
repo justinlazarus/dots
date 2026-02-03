@@ -2,6 +2,7 @@ font-family = "0x Proto Nerd Font"
 font-size = 16
 copy-on-select = clipboard
 clipboard-paste-protection = false
+clipboard-write = allow
 
 # Tokyo Night Storm theme
 background = #24283b

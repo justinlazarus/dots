@@ -249,9 +249,7 @@ default_floating_border pixel 2
 # Retina Scaling (3456x2234 @ 2x = 1728x1117 logical)
 output "eDP-1" scale 2
 
-# Brightness (The unbind stops the red bar error)
-unbindsym XF86MonBrightnessUp
-unbindsym XF86MonBrightnessDown
+# Brightness
 bindsym --locked XF86MonBrightnessUp exec brightnessctl set 5%+
 bindsym --locked XF86MonBrightnessDown exec brightnessctl set 5%-
 
@@ -268,6 +266,5 @@ input "type:keyboard" {
 # Cursor
 seat seat0 xcursor_theme Bibata-Modern-Classic 24
 
-# Keyboard Backlight
-bindsym --locked XF86KbdBrightnessUp exec brightnessctl -d 'kbd_backlight' set 5%+
-bindsym --locked XF86KbdBrightnessDown exec brightnessctl -d 'kbd_backlight' set 5%-
+# Autostart
+exec waybar

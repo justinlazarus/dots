@@ -107,6 +107,7 @@ sudo dnf install -y golang
 go install github.com/arl/gitmux@latest
 mkdir -p ~/.local/bin
 cp ~/go/bin/gitmux ~/.local/bin/gitmux
+ln -sf ~/dots/tmux/.gitmuxconfig ~/.config/tmux/.gitmuxconfig
 
 # 12. GTK THEME, ICONS & CURSOR
 echo "Installing Tokyo Night GTK theme, Papirus icons, Bibata cursor..."

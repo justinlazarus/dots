@@ -292,7 +292,7 @@ require('blink.cmp').setup {
     return vim.bo.filetype ~= 'markdown'
   end,
   fuzzy = {
-    implementation = 'prefer_rust',
+    implementation = 'lua',
   },
 }
 
