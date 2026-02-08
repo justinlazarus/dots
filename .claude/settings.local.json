@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "WebSearch"
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:ghostty.org)",
+      "Bash(ghostty +help:*)",
+      "Bash(ghostty +show-config:*)"
     ]
   }
 }

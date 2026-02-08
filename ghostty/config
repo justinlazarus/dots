@@ -3,6 +3,7 @@ font-size = 16
 copy-on-select = clipboard
 clipboard-paste-protection = false
 clipboard-write = allow
+app-notifications = no-clipboard-copy
 
 # Tokyo Night Storm theme
 background = #24283b
