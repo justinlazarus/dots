@@ -27,6 +27,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
 vim.lsp.enable 'lua_ls'
 vim.lsp.enable 'ts_ls'
 vim.lsp.enable 'jsonls'
+vim.lsp.enable 'yamlls'
 vim.lsp.enable 'angularls'
 vim.lsp.enable 'rust_analyzer'
 vim.lsp.enable 'terraform_ls'

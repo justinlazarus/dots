@@ -13,31 +13,76 @@ vim.pack.add {
   'https://github.com/echasnovski/mini.statusline',
   'https://github.com/nvim-tree/nvim-web-devicons',
   'https://github.com/stevearc/oil.nvim',
+  'https://github.com/ibhagwan/fzf-lua',
 }
 
 --------------------------------------------------------------------------------------------------- treesitter
 
-require('nvim-treesitter.install').install({
-  'bash',
-  'c_sharp',
-  'css',
-  'diff',
-  'html',
-  'javascript',
-  'json',
-  'lua',
-  'markdown',
-  'powershell',
-  'tsx',
-  'typescript',
-  'vim',
-  'vimdoc',
-  'xml',
-  'yaml',
-}, { summary = false })
-
--- Use bash parser for zsh files (no dedicated zsh parser exists)
-vim.treesitter.language.register('bash', 'zsh')
+-- Configure Treesitter after plugins are loaded
+vim.api.nvim_create_autocmd('VimEnter', {
+  callback = function()
+    -- Check if parsers need to be installed (only once)
+    local parser_install_file = vim.fn.stdpath('data') .. '/treesitter_parsers_installed'
+    
+    if vim.fn.filereadable(parser_install_file) == 0 then
+      -- First time setup - install parsers
+      local ok, install = pcall(require, 'nvim-treesitter.install')
+      if ok then
+        install.install({
+          'bash',
+          'c_sharp',
+          'css',
+          'diff',
+          'html',
+          'javascript',
+          'json',
+          'lua',
+          'markdown',
+          'powershell',
+          'tsx',
+          'typescript',
+          'vim',
+          'vimdoc',
+          'xml',
+          'yaml',
+        }, { summary = false })
+        
+        -- Create marker file to prevent reinstallation
+        vim.fn.writefile({}, parser_install_file)
+      end
+    end
+    
+    -- Setup Treesitter configuration
+    local ok, configs = pcall(require, 'nvim-treesitter.configs')
+    if ok then
+      configs.setup {
+        -- Don't auto-install to prevent compilation on every load
+        auto_install = false,
+        
+        -- Enable syntax highlighting
+        highlight = {
+          enable = true,
+          -- Disable for large files to improve performance
+          disable = function(lang, buf)
+            local max_filesize = 100 * 1024 -- 100 KB
+            local ok_stat, stats = pcall(vim.loop.fs_stat, vim.api.nvim_buf_get_name(buf))
+            if ok_stat and stats and stats.size > max_filesize then
+              return true
+            end
+          end,
+        },
+        
+        -- Enable better indentation
+        indent = {
+          enable = true,
+        },
+      }
+    end
+    
+    -- Use bash parser for zsh files (no dedicated zsh parser exists)
+    vim.treesitter.language.register('bash', 'zsh')
+  end,
+})
 
 -------------------------------------------------------------------------------------------------------- mason
 
@@ -67,17 +112,20 @@ vim.schedule(function()
   ensure_installed 'lua-language-server' -- lua_ls
   ensure_installed 'typescript-language-server' -- ts_ls
   ensure_installed 'json-lsp' -- jsonls
+  ensure_installed 'yaml-language-server' -- yamlls
   ensure_installed 'roslyn' -- C#/.NET (via third-party registry)
   ensure_installed 'angular-language-server' -- angular
   ensure_installed 'csharpier' -- C# formatter
   ensure_installed 'sqlfmt' -- SQL formatter
   ensure_installed 'stylua' -- Lua formatter
+  ensure_installed 'yamlfmt' -- YAML formatter
   ensure_installed 'terraform-ls' -- Terraform
   ensure_installed 'rust-analyzer' -- Rust
 end)
 
 ------------------------------------------------------------------------------------------------------- snacks
 
+-- Snacks setup (keeping everything except picker)
 local Snacks = require 'snacks'
 Snacks.setup {
   bigfile = {},
@@ -85,7 +133,7 @@ Snacks.setup {
   explorer = {},
   indent = {},
   input = {},
-  picker = {},
+  -- picker = {}, -- REMOVED - using fzf-lua instead
   notifier = {},
   quickfile = {},
   scope = {},
@@ -93,170 +141,74 @@ Snacks.setup {
   words = {},
 }
 
--- Snacks keymaps
+-- FZF-LUA keymaps (same bindings, working input!)
 local map = vim.keymap.set
 
 -- Top Pickers & Explorer
-map('n', '<leader><space>', function()
-  Snacks.picker.smart()
-end, { desc = 'Smart Find Files' })
-map('n', '<leader>,', function()
-  Snacks.picker.buffers()
-end, { desc = 'Buffers' })
-map('n', '<leader>/', function()
-  Snacks.picker.grep()
-end, { desc = 'Grep' })
-map('n', '<leader>:', function()
-  Snacks.picker.command_history()
-end, { desc = 'Command History' })
-map('n', '<leader>n', function()
-  Snacks.picker.notifications()
-end, { desc = 'Notification History' })
+map('n', '<leader><space>', '<cmd>FzfLua files<cr>', { desc = 'Smart Find Files' })
+map('n', '<leader>,', '<cmd>FzfLua buffers<cr>', { desc = 'Buffers' })
+map('n', '<leader>/', '<cmd>FzfLua live_grep<cr>', { desc = 'Grep' })
+map('n', '<leader>:', '<cmd>FzfLua command_history<cr>', { desc = 'Command History' })
+map('n', '<leader>n', '<cmd>FzfLua<cr>', { desc = 'All Pickers' })
 map('n', '<leader>e', function()
   Snacks.explorer()
 end, { desc = 'File Explorer' })
 
 -- find
-map('n', '<leader>fb', function()
-  Snacks.picker.buffers()
-end, { desc = 'Buffers' })
-map('n', '<leader>fc', function()
-  Snacks.picker.files { cwd = vim.fn.stdpath 'config' }
+map('n', '<leader>fb', '<cmd>FzfLua buffers<cr>', { desc = 'Buffers' })
+map('n', '<leader>fc', function() 
+  require('fzf-lua').files({ cwd = vim.fn.stdpath('config') })
 end, { desc = 'Find Config File' })
-map('n', '<leader>ff', function()
-  Snacks.picker.files()
-end, { desc = 'Find Files' })
-map('n', '<leader>fg', function()
-  Snacks.picker.git_files()
-end, { desc = 'Find Git Files' })
-map('n', '<leader>fp', function()
-  Snacks.picker.projects()
-end, { desc = 'Projects' })
-map('n', '<leader>fr', function()
-  Snacks.picker.recent()
-end, { desc = 'Recent' })
+map('n', '<leader>ff', '<cmd>FzfLua files<cr>', { desc = 'Find Files' })
+map('n', '<leader>fg', '<cmd>FzfLua git_files<cr>', { desc = 'Find Git Files' })
+map('n', '<leader>fp', '<cmd>FzfLua files<cr>', { desc = 'Projects' })
+map('n', '<leader>fr', '<cmd>FzfLua oldfiles<cr>', { desc = 'Recent' })
 
 -- git
-map('n', '<leader>gb', function()
-  Snacks.picker.git_branches()
-end, { desc = 'Git Branches' })
-map('n', '<leader>gl', function()
-  Snacks.picker.git_log()
-end, { desc = 'Git Log' })
-map('n', '<leader>gL', function()
-  Snacks.picker.git_log_line()
-end, { desc = 'Git Log Line' })
-map('n', '<leader>gs', function()
-  Snacks.picker.git_status()
-end, { desc = 'Git Status' })
-map('n', '<leader>gS', function()
-  Snacks.picker.git_stash()
-end, { desc = 'Git Stash' })
-map('n', '<leader>gd', function()
-  Snacks.picker.git_diff()
-end, { desc = 'Git Diff (Hunks)' })
-map('n', '<leader>gf', function()
-  Snacks.picker.git_log_file()
-end, { desc = 'Git Log File' })
+map('n', '<leader>gb', '<cmd>FzfLua git_branches<cr>', { desc = 'Git Branches' })
+map('n', '<leader>gl', '<cmd>FzfLua git_commits<cr>', { desc = 'Git Log' })
+map('n', '<leader>gL', '<cmd>FzfLua git_bcommits<cr>', { desc = 'Git Log Line' })
+map('n', '<leader>gs', '<cmd>FzfLua git_status<cr>', { desc = 'Git Status' })
+map('n', '<leader>gS', '<cmd>FzfLua git_stash<cr>', { desc = 'Git Stash' })
+map('n', '<leader>gd', '<cmd>FzfLua git_status<cr>', { desc = 'Git Diff (Hunks)' })
+map('n', '<leader>gf', '<cmd>FzfLua git_bcommits<cr>', { desc = 'Git Log File' })
 
 -- Grep / buffer lines
-map('n', '<leader>sb', function()
-  Snacks.picker.lines()
-end, { desc = 'Buffer Lines' })
-map('n', '<leader>sB', function()
-  Snacks.picker.grep_buffers()
-end, { desc = 'Grep Open Buffers' })
-map('n', '<leader>sg', function()
-  Snacks.picker.grep()
-end, { desc = 'Grep' })
-map({ 'n', 'x' }, '<leader>sw', function()
-  Snacks.picker.grep_word()
-end, { desc = 'Visual selection or word' })
+map('n', '<leader>sb', '<cmd>FzfLua blines<cr>', { desc = 'Buffer Lines' })
+map('n', '<leader>sB', '<cmd>FzfLua grep_curbuf<cr>', { desc = 'Grep Open Buffers' })
+map('n', '<leader>sg', '<cmd>FzfLua live_grep<cr>', { desc = 'Grep' })
+map({ 'n', 'x' }, '<leader>sw', '<cmd>FzfLua grep_cword<cr>', { desc = 'Visual selection or word' })
 
 -- search helpers
-map('n', '<leader>s"', function()
-  Snacks.picker.registers()
-end, { desc = 'Registers' })
-map('n', '<leader>s/', function()
-  Snacks.picker.search_history()
-end, { desc = 'Search History' })
-map('n', '<leader>sa', function()
-  Snacks.picker.autocmds()
-end, { desc = 'Autocmds' })
-map('n', '<leader>sc', function()
-  Snacks.picker.command_history()
-end, { desc = 'Command History' })
-map('n', '<leader>sC', function()
-  Snacks.picker.commands()
-end, { desc = 'Commands' })
-map('n', '<leader>sd', function()
-  Snacks.picker.diagnostics()
-end, { desc = 'Diagnostics' })
-map('n', '<leader>sD', function()
-  Snacks.picker.diagnostics_buffer()
-end, { desc = 'Buffer Diagnostics' })
-map('n', '<leader>sh', function()
-  Snacks.picker.help()
-end, { desc = 'Help Pages' })
-map('n', '<leader>sH', function()
-  Snacks.picker.highlights()
-end, { desc = 'Highlights' })
-map('n', '<leader>si', function()
-  Snacks.picker.icons()
-end, { desc = 'Icons' })
-map('n', '<leader>sj', function()
-  Snacks.picker.jumps()
-end, { desc = 'Jumps' })
-map('n', '<leader>sk', function()
-  Snacks.picker.keymaps()
-end, { desc = 'Keymaps' })
-map('n', '<leader>sl', function()
-  Snacks.picker.loclist()
-end, { desc = 'Location List' })
-map('n', '<leader>sm', function()
-  Snacks.picker.marks()
-end, { desc = 'Marks' })
-map('n', '<leader>sM', function()
-  Snacks.picker.man()
-end, { desc = 'Man Pages' })
-map('n', '<leader>sp', function()
-  Snacks.picker.lazy()
-end, { desc = 'Search for Plugin Spec' })
-map('n', '<leader>sq', function()
-  Snacks.picker.qflist()
-end, { desc = 'Quickfix List' })
-map('n', '<leader>sR', function()
-  Snacks.picker.resume()
-end, { desc = 'Resume' })
-map('n', '<leader>su', function()
-  Snacks.picker.undo()
-end, { desc = 'Undo History' })
-map('n', '<leader>uC', function()
-  Snacks.picker.colorschemes()
-end, { desc = 'Colorschemes' })
+map('n', '<leader>s"', '<cmd>FzfLua registers<cr>', { desc = 'Registers' })
+map('n', '<leader>s/', '<cmd>FzfLua search_history<cr>', { desc = 'Search History' })
+map('n', '<leader>sa', '<cmd>FzfLua autocmds<cr>', { desc = 'Autocmds' })
+map('n', '<leader>sc', '<cmd>FzfLua command_history<cr>', { desc = 'Command History' })
+map('n', '<leader>sC', '<cmd>FzfLua commands<cr>', { desc = 'Commands' })
+map('n', '<leader>sd', '<cmd>FzfLua diagnostics_workspace<cr>', { desc = 'Diagnostics' })
+map('n', '<leader>sD', '<cmd>FzfLua diagnostics_document<cr>', { desc = 'Buffer Diagnostics' })
+map('n', '<leader>sh', '<cmd>FzfLua help_tags<cr>', { desc = 'Help Pages' })
+map('n', '<leader>sH', '<cmd>FzfLua highlights<cr>', { desc = 'Highlights' })
+map('n', '<leader>si', '<cmd>FzfLua<cr>', { desc = 'All Pickers' })
+map('n', '<leader>sj', '<cmd>FzfLua jumps<cr>', { desc = 'Jumps' })
+map('n', '<leader>sk', '<cmd>FzfLua keymaps<cr>', { desc = 'Keymaps' })
+map('n', '<leader>sl', '<cmd>FzfLua loclist<cr>', { desc = 'Location List' })
+map('n', '<leader>sm', '<cmd>FzfLua marks<cr>', { desc = 'Marks' })
+map('n', '<leader>sM', '<cmd>FzfLua manpages<cr>', { desc = 'Man Pages' })
+map('n', '<leader>sp', '<cmd>FzfLua<cr>', { desc = 'All Pickers' })
+map('n', '<leader>sq', '<cmd>FzfLua quickfix<cr>', { desc = 'Quickfix List' })
+map('n', '<leader>sR', '<cmd>FzfLua resume<cr>', { desc = 'Resume' })
+map('n', '<leader>su', '<cmd>FzfLua changes<cr>', { desc = 'Change List' })
+map('n', '<leader>uC', '<cmd>FzfLua colorschemes<cr>', { desc = 'Colorschemes' })
 
 -- LSP-related pickers
-map('n', 'gd', function()
-  Snacks.picker.lsp_definitions()
-end, { desc = 'Goto Definition' })
-map('n', 'gD', function()
-  Snacks.picker.lsp_declarations()
-end, { desc = 'Goto Declaration' })
-map('n', 'gr', function()
-  Snacks.picker.lsp_references()
-end, { nowait = true, desc = 'References' })
-map('n', 'gI', function()
-  Snacks.picker.lsp_implementations()
-end, { desc = 'Goto Implementation' })
-map('n', 'gy', function()
-  Snacks.picker.lsp_type_definitions()
-end, { desc = 'Goto Type Definition' })
-map('n', '<leader>ss', function()
-  Snacks.picker.lsp_symbols()
-end, { desc = 'LSP Symbols' })
-map('n', '<leader>sS', function()
-  Snacks.picker.lsp_workspace_symbols()
-end, { desc = 'LSP Workspace Symbols' })
+map('n', 'gd', '<cmd>FzfLua lsp_definitions<cr>', { desc = 'Goto Definition' })
+map('n', 'gD', '<cmd>FzfLua lsp_declarations<cr>', { desc = 'Goto Declaration' })
+map('n', 'gr', '<cmd>FzfLua lsp_references<cr>', { nowait = true, desc = 'References' })
+map('n', 'gI', '<cmd>FzfLua lsp_implementations<cr>', { desc = 'Goto Implementation' })
+map('n', 'gy', '<cmd>FzfLua lsp_typedefs<cr>', { desc = 'Goto Type Definition' })
+map('n', '<leader>ss', '<cmd>FzfLua lsp_document_symbols<cr>', { desc = 'LSP Symbols' })
+map('n', '<leader>sS', '<cmd>FzfLua lsp_workspace_symbols<cr>', { desc = 'LSP Workspace Symbols' })
 
 -----------------------------------------------------------------------------------------------------which-key
 
@@ -314,7 +266,18 @@ require('conform').setup {
 
     return { timeout_ms = 3000, lsp_format = 'fallback' }
   end,
-  formatters_by_ft = { lua = { 'stylua' }, cs = { 'csharpier' } },
+  formatters_by_ft = { 
+    lua = { 'stylua' }, 
+    cs = { 'csharpier' },
+    yaml = { 'yamlfmt' },
+  },
+  formatters = {
+    csharpier = {
+      command = "csharpier",
+      args = { "format", "--write-stdout" },
+      stdin = true,
+    },
+  },
 }
 
 vim.keymap.set('n', '<leader>cf', function()

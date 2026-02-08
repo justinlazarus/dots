@@ -20,6 +20,10 @@
       "rev": "da369d90cfd6c396b1d0ec259836a1c7222fb2ea",
       "src": "https://github.com/github/copilot.vim.git"
     },
+    "fzf-lua": {
+      "rev": "c86b72c62b01d2242cafa45fb0d1fc3bf66e6a2b",
+      "src": "https://github.com/ibhagwan/fzf-lua"
+    },
     "gitsigns.nvim": {
       "rev": "20ad441",
       "src": "https://github.com/lewis6991/gitsigns.nvim"
