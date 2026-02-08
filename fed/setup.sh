@@ -18,7 +18,7 @@ sudo dnf upgrade -y
 echo "📡 Installing Wi-Fi and Intel Broadwell Graphics Stack..."
 # BCM43602 firmware + Broadcom driver
 sudo dnf install -y broadcom-wl akmod-wl kernel-devel \
-                 vulkan-intel intel-media-driver libva-utils
+                 vulkan-intel libva-intel-driver libva-utils
 sudo akmods --force
 
 # 3. POWER OPTIMIZATION (PowerTop + TLP + Thermald)
@@ -26,6 +26,37 @@ echo "🔋 Tuning for battery life and thermals..."
 sudo dnf install -y powertop tlp thermald brightnessctl
 sudo systemctl enable --now thermald
 sudo systemctl enable --now tlp
+
+# TLP config for Broadwell i5-5257U
+sudo tee /etc/tlp.conf <<EOF
+# CPU
+CPU_SCALING_GOVERNOR_ON_AC=schedutil
+CPU_SCALING_GOVERNOR_ON_BAT=schedutil
+CPU_BOOST_ON_AC=1
+CPU_BOOST_ON_BAT=0
+ENERGY_PERF_POLICY_ON_AC=balance_performance
+ENERGY_PERF_POLICY_ON_BAT=power
+
+# SATA link power management for deeper C-states
+SATA_LINKPWR_ON_AC=med_power_with_dipm
+SATA_LINKPWR_ON_BAT=med_power_with_dipm
+
+# WiFi power save off (brcmfmac connectivity issues)
+WIFI_PWR_ON_AC=off
+WIFI_PWR_ON_BAT=off
+
+# Audio power save (prevent pop/click on AC)
+SOUND_POWER_SAVE_ON_AC=0
+SOUND_POWER_SAVE_ON_BAT=10
+SOUND_POWER_SAVE_CONTROLLER=Y
+
+# Runtime PM
+RUNTIME_PM_ON_AC=auto
+RUNTIME_PM_ON_BAT=auto
+
+# USB
+USB_AUTOSUSPEND=1
+EOF
 
 # Create a systemd service to auto-tune PowerTop on every boot
 sudo tee /etc/systemd/system/powertop-autotune.service <<EOF
@@ -58,39 +89,95 @@ XDG_CURRENT_DESKTOP=sway
 XDG_SESSION_TYPE=wayland
 EOF
 
-# 6. SWAY CONFIGURATION (HiDPI & Inputs)
-echo "🖥️ Writing Sway configs..."
-mkdir -p ~/.config/sway/config.d
+# 6. FONTS
+echo "🔤 Installing 0xProto Nerd Font..."
+mkdir -p ~/.local/share/fonts/0xProto
+curl -Lo /tmp/0xProto.zip https://github.com/ryanoasis/nerd-fonts/releases/latest/download/0xProto.zip
+unzip -o /tmp/0xProto.zip -d ~/.local/share/fonts/0xProto
+rm -f /tmp/0xProto.zip
+fc-cache -fv
 
-# Display: 1.5x Scaling for 13" Retina
-cat <<EOF > ~/.config/sway/config.d/01-display.conf
-output "eDP-1" scale 1.5
+# 7. GHOSTTY TERMINAL
+echo "👻 Installing Ghostty terminal..."
+sudo dnf copr enable -y pgdev/ghostty
+sudo dnf install -y ghostty
+
+# Symlink Ghostty config
+mkdir -p ~/.config/ghostty
+ln -sf ~/dots/ghostty/config ~/.config/ghostty/config
+
+# 8. SWAY + WAYBAR + ROFI + DUNST + SWAYLOCK CONFIG
+echo "🪟 Symlinking sway, waybar, rofi, dunst, swaylock configs..."
+ln -sf ~/dots/fed/sway-config ~/.config/sway/config
+mkdir -p ~/.config/waybar
+ln -sf ~/dots/fed/waybar/config.jsonc ~/.config/waybar/config.jsonc
+ln -sf ~/dots/fed/waybar/style.css ~/.config/waybar/style.css
+mkdir -p ~/.config/rofi
+ln -sf ~/dots/fed/rofi/config.rasi ~/.config/rofi/config.rasi
+ln -sf ~/dots/fed/rofi/tokyonight.rasi ~/.config/rofi/tokyonight.rasi
+mkdir -p ~/.config/dunst
+ln -sf ~/dots/fed/dunst/dunstrc ~/.config/dunst/dunstrc
+mkdir -p ~/.config/swaylock
+ln -sf ~/dots/fed/swaylock/config ~/.config/swaylock/config
+
+# 9. DOTFILE SYMLINKS (git, zsh, tmux, neovim)
+echo "🔗 Symlinking git, zsh, tmux, and neovim configs..."
+ln -sf ~/dots/.gitconfig ~/.gitconfig
+ln -sf ~/dots/.zshrc ~/.zshrc
+mkdir -p ~/.config/tmux
+ln -sf ~/dots/tmux/tmux.conf ~/.config/tmux/tmux.conf
+mkdir -p ~/.config/nvim
+ln -sf ~/dots/nvim/init.lua ~/.config/nvim/init.lua
+ln -sfn ~/dots/nvim/lua ~/.config/nvim/lua
+ln -sfn ~/dots/nvim/lsp ~/.config/nvim/lsp
+
+# 10. GITMUX (tmux git status)
+echo "📊 Installing gitmux..."
+go install github.com/arl/gitmux@latest
+cp ~/go/bin/gitmux ~/.local/bin/gitmux
+
+# 11. GTK THEME, ICONS & CURSOR
+echo "🎨 Installing Tokyo Night GTK theme, Papirus icons, Bibata cursor..."
+sudo dnf install -y sassc papirus-icon-theme
+git clone https://github.com/Fausto-Korpsvart/Tokyo-Night-GTK-Theme.git /tmp/tokyonight-gtk
+/tmp/tokyonight-gtk/themes/install.sh -c dark --tweaks storm outline -l
+rm -rf /tmp/tokyonight-gtk
+
+# Bibata cursor
+curl -sL https://github.com/ful1e5/Bibata_Cursor/releases/latest/download/Bibata-Modern-Classic.tar.xz -o /tmp/bibata.tar.xz
+mkdir -p ~/.local/share/icons
+tar xf /tmp/bibata.tar.xz -C ~/.local/share/icons/
+rm -f /tmp/bibata.tar.xz
+
+# Apply themes
+gsettings set org.gnome.desktop.interface gtk-theme "Tokyonight-Dark-Storm"
+gsettings set org.gnome.desktop.interface color-scheme "prefer-dark"
+gsettings set org.gnome.desktop.interface icon-theme "Papirus-Dark"
+gsettings set org.gnome.desktop.interface cursor-theme "Bibata-Modern-Classic"
+gsettings set org.gnome.desktop.interface cursor-size 24
+
+# 12. ZRAM TUNING
+echo "💾 Tuning ZRAM (zstd compression + VM params)..."
+sudo tee /etc/systemd/zram-generator.conf <<EOF
+[zram0]
+zram-size = min(ram, 8192)
+compression-algorithm = zstd
 EOF
 
-# Input: Trackpad + Caps-to-Control (nocaps)
-cat <<EOF > ~/.config/sway/config.d/02-input.conf
-input "type:keyboard" {
-    xkb_options ctrl:nocaps
-}
-input "type:touchpad" {
-    tap enabled
-    natural_scroll enabled
-    dwt enabled
-    pointer_accel 0.3
-    accel_profile "flat"
-}
+sudo tee /etc/sysctl.d/99-zram.conf <<EOF
+vm.swappiness = 180
+vm.page-cluster = 0
+vm.watermark_boost_factor = 0
+vm.watermark_scale_factor = 125
 EOF
+sudo sysctl --load /etc/sysctl.d/99-zram.conf
 
-# Keybinds: Audio & Brightness
-cat <<EOF > ~/.config/sway/config.d/03-keybinds.conf
-bindsym XF86AudioRaiseVolume exec wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+
-bindsym XF86AudioLowerVolume exec wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
-bindsym XF86AudioMute exec wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
-bindsym XF86MonBrightnessUp exec brightnessctl set 5%+
-bindsym XF86MonBrightnessDown exec brightnessctl set 5%-
-EOF
+# 13. BTRFS noatime
+echo "💾 Adding noatime to Btrfs mounts..."
+sudo sed -i 's/subvol=root,compress=zstd:1/subvol=root,compress=zstd:1,noatime/' /etc/fstab
+sudo sed -i 's/subvol=home,compress=zstd:1/subvol=home,compress=zstd:1,noatime/' /etc/fstab
 
-# 7. MULTIMEDIA CODECS
+# 14. MULTIMEDIA CODECS
 echo "🎬 Installing Hardware Codecs..."
 sudo dnf swap -y ffmpeg-free ffmpeg --allowerasing
 sudo dnf install -y gstreamer1-plugins-ugly gstreamer1-plugins-bad-free-extras freetype-freeworld

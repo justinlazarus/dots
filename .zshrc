@@ -41,6 +41,8 @@ export PATH="/opt/homebrew/bin:$PATH"
 # Set Homebrew prefix for Apple Silicon Macs
 export HOMEBREW_PREFIX="/opt/homebrew"
 
+export PATH="/Users/jlazarus/.cargo/bin:$PATH"
+
 export EDITOR=neovim
 
 # =========================================
@@ -61,6 +63,7 @@ nvm() {
 export CWIMS_ADMIN_PASSWORD="Costco123@"
 export Database__DepotDbConnectionString="Server=localhost,1433;Database=depot-db;User Id=sa;Password=Costco12345@;TrustServerCertificate=true;Encrypt=false;"
 export Database__ReadOnlyDepotDbConnectionString="Server=localhost,1433;Database=depot-db;User Id=sa;Password=Costco12345@;TrustServerCertificate=true;Encrypt=false;"
+export DOTNET_ConnectionStrings__Database="${DOTNET_ConnectionStrings__Database:-Data Source=localhost,1433;Database=intl-depot-db;Integrated Security=false;User ID=SA;Password=Intl@depot1;TrustServerCertificate=True;}"
 export DOTNET_MessagingOptions__Namespace="${DOTNET_MessagingOptions__Namespace:-amqp://guest:guest@localhost:5672/}"
 export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317"
 export ASPNETCORE_ENVIRONMENT=Development
