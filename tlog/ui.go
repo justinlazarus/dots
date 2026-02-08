@@ -408,6 +408,7 @@ func (m Model) handleEditorFinished(msg editorFinishedMsg) (tea.Model, tea.Cmd) 
 			Tag:      msg.result.Tag,
 			Title:    msg.result.Title,
 			Content:  msg.result.Content,
+			Metadata: msg.result.Metadata,
 		}
 		m.db.SaveEntry(&entry)
 		m.currentDate = date
@@ -420,6 +421,7 @@ func (m Model) handleEditorFinished(msg editorFinishedMsg) (tea.Model, tea.Cmd) 
 			Tag:      msg.result.Tag,
 			Title:    msg.result.Title,
 			Content:  msg.result.Content,
+			Metadata: msg.result.Metadata,
 		}
 		m.db.UpdateEntry(&entry)
 	}
@@ -476,6 +478,7 @@ func (m Model) openEditEntryEditor() (tea.Model, tea.Cmd) {
 		entry.Content,
 		entry.Tag,
 		entry.Title,
+		entry.Metadata,
 	)
 	if err != nil {
 		return m, nil
@@ -1071,6 +1074,14 @@ func (m *Model) renderEntryDetail(width, height int) string {
 
 	var lines []string
 	lines = append(lines, " "+titleLine)
+
+	// Display metadata key/value pairs
+	if len(entry.Metadata) > 0 {
+		for k, v := range entry.Metadata {
+			lines = append(lines, " "+dimStyle.Render(k+": ")+v)
+		}
+	}
+
 	lines = append(lines, "")
 
 	// Content with link detection

@@ -13,6 +13,7 @@ type LogEntry struct {
 	Tag      *string
 	Title    *string
 	Content  string
+	Metadata map[string]string
 }
 
 // AppMode represents the current UI mode

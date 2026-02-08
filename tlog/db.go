@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -29,12 +30,16 @@ func OpenDatabase(path string) (*Database, error) {
 			location TEXT,
 			tag TEXT,
 			title TEXT,
-			content TEXT NOT NULL
+			content TEXT NOT NULL,
+			metadata TEXT
 		)
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create logs table: %w", err)
 	}
+
+	// Migrate: add metadata column if it doesn't exist (for existing DBs)
+	conn.Exec(`ALTER TABLE logs ADD COLUMN metadata TEXT`)
 
 	// Create index
 	_, err = conn.Exec(`CREATE INDEX IF NOT EXISTS idx_logs_date ON logs(date)`)
@@ -66,9 +71,16 @@ func (db *Database) SaveEntry(entry *LogEntry) error {
 		loc = &entry.Location
 	}
 
+	var metadataJSON *string
+	if len(entry.Metadata) > 0 {
+		b, _ := json.Marshal(entry.Metadata)
+		s := string(b)
+		metadataJSON = &s
+	}
+
 	_, err := db.conn.Exec(`
-		INSERT INTO logs (id, date, time, location, tag, title, content)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO logs (id, date, time, location, tag, title, content, metadata)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	`,
 		entry.ID,
 		entry.Date.Format("2006-01-02"),
@@ -77,6 +89,7 @@ func (db *Database) SaveEntry(entry *LogEntry) error {
 		entry.Tag,
 		entry.Title,
 		entry.Content,
+		metadataJSON,
 	)
 	return err
 }
@@ -87,8 +100,15 @@ func (db *Database) UpdateEntry(entry *LogEntry) error {
 		loc = &entry.Location
 	}
 
+	var metadataJSON *string
+	if len(entry.Metadata) > 0 {
+		b, _ := json.Marshal(entry.Metadata)
+		s := string(b)
+		metadataJSON = &s
+	}
+
 	_, err := db.conn.Exec(`
-		UPDATE logs SET date = ?, time = ?, location = ?, tag = ?, title = ?, content = ?
+		UPDATE logs SET date = ?, time = ?, location = ?, tag = ?, title = ?, content = ?, metadata = ?
 		WHERE id = ?
 	`,
 		entry.Date.Format("2006-01-02"),
@@ -97,6 +117,7 @@ func (db *Database) UpdateEntry(entry *LogEntry) error {
 		entry.Tag,
 		entry.Title,
 		entry.Content,
+		metadataJSON,
 		entry.ID,
 	)
 	return err
@@ -110,7 +131,7 @@ func (db *Database) DeleteEntry(id string) error {
 func (db *Database) GetEntriesForDate(date time.Time) ([]LogEntry, error) {
 	dateStr := date.Format("2006-01-02")
 	rows, err := db.conn.Query(`
-		SELECT id, date, time, location, tag, title, content
+		SELECT id, date, time, location, tag, title, content, metadata
 		FROM logs
 		WHERE date = ?
 		ORDER BY time ASC
@@ -124,9 +145,9 @@ func (db *Database) GetEntriesForDate(date time.Time) ([]LogEntry, error) {
 	for rows.Next() {
 		var e LogEntry
 		var dateStr, timeStr string
-		var loc, tag, title sql.NullString
+		var loc, tag, title, metadata sql.NullString
 
-		err := rows.Scan(&e.ID, &dateStr, &timeStr, &loc, &tag, &title, &e.Content)
+		err := rows.Scan(&e.ID, &dateStr, &timeStr, &loc, &tag, &title, &e.Content, &metadata)
 		if err != nil {
 			return nil, err
 		}
@@ -141,6 +162,9 @@ func (db *Database) GetEntriesForDate(date time.Time) ([]LogEntry, error) {
 		}
 		if title.Valid {
 			e.Title = &title.String
+		}
+		if metadata.Valid {
+			json.Unmarshal([]byte(metadata.String), &e.Metadata)
 		}
 
 		entries = append(entries, e)
@@ -157,9 +181,11 @@ func (db *Database) SearchEntries(query string) ([]SearchResult, error) {
 	queryLower := "%" + strings.ToLower(query) + "%"
 	rows, err := db.conn.Query(`
 		SELECT date, time FROM logs
-		WHERE LOWER(content) LIKE ? OR (location IS NOT NULL AND LOWER(location) LIKE ?)
+		WHERE LOWER(content) LIKE ?
+			OR (location IS NOT NULL AND LOWER(location) LIKE ?)
+			OR (metadata IS NOT NULL AND LOWER(metadata) LIKE ?)
 		ORDER BY date DESC, time DESC
-	`, queryLower, queryLower)
+	`, queryLower, queryLower, queryLower)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +255,7 @@ func (db *Database) GetAllSummaries() (map[string]string, error) {
 
 func (db *Database) ExportToMarkdown(path string) error {
 	rows, err := db.conn.Query(`
-		SELECT date, time, location, tag, title, content
+		SELECT date, time, location, tag, title, content, metadata
 		FROM logs
 		ORDER BY date DESC, time DESC
 	`)
@@ -241,9 +267,9 @@ func (db *Database) ExportToMarkdown(path string) error {
 	var content strings.Builder
 	for rows.Next() {
 		var dateStr, timeStr, body string
-		var loc, tag, title sql.NullString
+		var loc, tag, title, metadata sql.NullString
 
-		if err := rows.Scan(&dateStr, &timeStr, &loc, &tag, &title, &body); err != nil {
+		if err := rows.Scan(&dateStr, &timeStr, &loc, &tag, &title, &body, &metadata); err != nil {
 			return err
 		}
 
@@ -262,7 +288,18 @@ func (db *Database) ExportToMarkdown(path string) error {
 			titleSuffix = fmt.Sprintf(" - %s", title.String)
 		}
 
-		content.WriteString(fmt.Sprintf("## %s %s - %s%s%s\n\n", dateStr, timeStr, locDisplay, tagSuffix, titleSuffix))
+		fmt.Fprintf(&content, "## %s %s - %s%s%s\n\n", dateStr, timeStr, locDisplay, tagSuffix, titleSuffix)
+
+		if metadata.Valid {
+			var meta map[string]string
+			if json.Unmarshal([]byte(metadata.String), &meta) == nil && len(meta) > 0 {
+				for k, v := range meta {
+					fmt.Fprintf(&content, "- **%s**: %s\n", k, v)
+				}
+				content.WriteString("\n")
+			}
+		}
+
 		content.WriteString(body)
 		content.WriteString("\n\n")
 	}

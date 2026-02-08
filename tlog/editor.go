@@ -65,7 +65,7 @@ func CreateNewEntryTempFile(location *string, defaultTag *string, date time.Time
 }
 
 // CreateEditEntryTempFile creates a temp file for editing an existing entry
-func CreateEditEntryTempFile(dateStr, timeStr, location, content string, tag, title *string) (string, error) {
+func CreateEditEntryTempFile(dateStr, timeStr, location, content string, tag, title *string, metadata map[string]string) (string, error) {
 	tmpFile, err := os.CreateTemp("", "tlog-*.md")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp file: %w", err)
@@ -84,6 +84,9 @@ func CreateEditEntryTempFile(dateStr, timeStr, location, content string, tag, ti
 	fmt.Fprintf(tmpFile, "location: %s\n", location)
 	if tag != nil {
 		fmt.Fprintf(tmpFile, "tag: %s\n", *tag)
+	}
+	for k, v := range metadata {
+		fmt.Fprintf(tmpFile, "%s: %s\n", k, yamlQuote(v))
 	}
 	fmt.Fprintln(tmpFile, "---")
 	fmt.Fprintln(tmpFile)
@@ -115,6 +118,7 @@ type EntryResult struct {
 	Content  string
 	Tag      *string
 	Title    *string
+	Metadata map[string]string
 }
 
 func parseYAMLFrontmatter(content, defaultDate, defaultTime string) (*EntryResult, error) {
@@ -182,6 +186,13 @@ func parseYAMLFrontmatter(content, defaultDate, defaultTime string) (*EntryResul
 		case "title":
 			if value != "" {
 				result.Title = &value
+			}
+		default:
+			if key != "" && value != "" {
+				if result.Metadata == nil {
+					result.Metadata = make(map[string]string)
+				}
+				result.Metadata[key] = value
 			}
 		}
 	}
