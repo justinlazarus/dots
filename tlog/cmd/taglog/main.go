@@ -5,11 +5,15 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 
 	"tlog/internal/db"
 )
 
 func main() {
+	lipgloss.SetColorProfile(termenv.TrueColor)
+
 	database, err := db.OpenDatabase("logs.db")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to open database: %v\n", err)
