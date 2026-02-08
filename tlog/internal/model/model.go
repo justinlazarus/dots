@@ -1,7 +1,10 @@
-package main
+package model
 
 import (
+	"math/rand"
 	"time"
+
+	"github.com/oklog/ulid/v2"
 )
 
 // LogEntry represents a single log entry
@@ -63,4 +66,16 @@ func (m *MonthlySummaries) SetSummary(date time.Time, text string) {
 	} else {
 		m.Summaries[key] = text
 	}
+}
+
+// SearchResult holds date and entry index for search results
+type SearchResult struct {
+	Date       time.Time
+	EntryIndex int
+}
+
+var entropy = ulid.Monotonic(rand.New(rand.NewSource(time.Now().UnixNano())), 0)
+
+func GenerateULID() string {
+	return ulid.MustNew(ulid.Timestamp(time.Now()), entropy).String()
 }

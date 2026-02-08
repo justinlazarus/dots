@@ -1,14 +1,13 @@
-package main
+package editor
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"strings"
 	"time"
 )
 
-func getEditor() string {
+func GetEditor() string {
 	editor := os.Getenv("EDITOR")
 	if editor == "" {
 		editor = "nvim"
@@ -21,7 +20,7 @@ func getEditor() string {
 	}
 }
 
-func yamlQuote(s string) string {
+func YamlQuote(s string) string {
 	if s == "" {
 		return ""
 	}
@@ -54,9 +53,9 @@ func CreateNewEntryTempFile(location *string, defaultTag *string, date time.Time
 	fmt.Fprintln(tmpFile, "---")
 	fmt.Fprintf(tmpFile, "date: %s\n", date.Format("2006-01-02"))
 	fmt.Fprintf(tmpFile, "time: %s\n", now.Format("15:04:05"))
-	fmt.Fprintf(tmpFile, "title: %s\n", yamlQuote(""))
-	fmt.Fprintf(tmpFile, "location: %s\n", yamlQuote(loc))
-	fmt.Fprintf(tmpFile, "tag: %s\n", yamlQuote(tag))
+	fmt.Fprintf(tmpFile, "title: %s\n", YamlQuote(""))
+	fmt.Fprintf(tmpFile, "location: %s\n", YamlQuote(loc))
+	fmt.Fprintf(tmpFile, "tag: %s\n", YamlQuote(tag))
 	fmt.Fprintln(tmpFile, "---")
 	fmt.Fprintln(tmpFile)
 	tmpFile.Close()
@@ -80,13 +79,13 @@ func CreateEditEntryTempFile(dateStr, timeStr, location, content string, tag, ti
 	fmt.Fprintln(tmpFile, "---")
 	fmt.Fprintf(tmpFile, "date: %s\n", dateStr)
 	fmt.Fprintf(tmpFile, "time: %s\n", timeStr)
-	fmt.Fprintf(tmpFile, "title: %s\n", yamlQuote(titleStr))
+	fmt.Fprintf(tmpFile, "title: %s\n", YamlQuote(titleStr))
 	fmt.Fprintf(tmpFile, "location: %s\n", location)
 	if tag != nil {
 		fmt.Fprintf(tmpFile, "tag: %s\n", *tag)
 	}
 	for k, v := range metadata {
-		fmt.Fprintf(tmpFile, "%s: %s\n", k, yamlQuote(v))
+		fmt.Fprintf(tmpFile, "%s: %s\n", k, YamlQuote(v))
 	}
 	fmt.Fprintln(tmpFile, "---")
 	fmt.Fprintln(tmpFile)
@@ -121,7 +120,7 @@ type EntryResult struct {
 	Metadata map[string]string
 }
 
-func parseYAMLFrontmatter(content, defaultDate, defaultTime string) (*EntryResult, error) {
+func ParseYAMLFrontmatter(content, defaultDate, defaultTime string) (*EntryResult, error) {
 	lines := strings.Split(content, "\n")
 	if len(lines) == 0 {
 		return nil, nil
@@ -170,7 +169,7 @@ func parseYAMLFrontmatter(content, defaultDate, defaultTime string) (*EntryResul
 			continue
 		}
 		key := strings.TrimSpace(line[:colonIdx])
-		value := unquoteValue(strings.TrimSpace(line[colonIdx+1:]))
+		value := UnquoteValue(strings.TrimSpace(line[colonIdx+1:]))
 
 		switch key {
 		case "date":
@@ -205,7 +204,7 @@ func parseYAMLFrontmatter(content, defaultDate, defaultTime string) (*EntryResul
 	return result, nil
 }
 
-func unquoteValue(v string) string {
+func UnquoteValue(v string) string {
 	s := strings.TrimSpace(v)
 	if len(s) >= 2 && strings.HasPrefix(s, "\"") && strings.HasSuffix(s, "\"") {
 		inner := s[1 : len(s)-1]
@@ -219,18 +218,4 @@ func unquoteValue(v string) string {
 		return inner
 	}
 	return s
-}
-
-// Helper for reading user input
-func promptChoice() (rune, error) {
-	reader := bufio.NewReader(os.Stdin)
-	line, err := reader.ReadString('\n')
-	if err != nil {
-		return 0, err
-	}
-	line = strings.TrimSpace(line)
-	if len(line) == 0 {
-		return '\n', nil
-	}
-	return rune(line[0]), nil
 }

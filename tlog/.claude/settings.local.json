@@ -4,7 +4,10 @@
       "Bash(go build:*)",
       "Bash(git config:*)",
       "Bash(echo:*)",
-      "Bash(go env:*)"
+      "Bash(go env:*)",
+      "Bash(grep:*)",
+      "Bash(go install:*)",
+      "Bash(tlog --help:*)"
     ]
   }
 }

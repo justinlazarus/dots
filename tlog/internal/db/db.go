@@ -1,4 +1,4 @@
-package main
+package db
 
 import (
 	"database/sql"
@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"tlog/internal/model"
 
 	_ "modernc.org/sqlite"
 )
@@ -65,7 +67,7 @@ func (db *Database) Close() error {
 	return db.conn.Close()
 }
 
-func (db *Database) SaveEntry(entry *LogEntry) error {
+func (db *Database) SaveEntry(entry *model.LogEntry) error {
 	var loc *string
 	if entry.Location != "" {
 		loc = &entry.Location
@@ -94,7 +96,7 @@ func (db *Database) SaveEntry(entry *LogEntry) error {
 	return err
 }
 
-func (db *Database) UpdateEntry(entry *LogEntry) error {
+func (db *Database) UpdateEntry(entry *model.LogEntry) error {
 	var loc *string
 	if entry.Location != "" {
 		loc = &entry.Location
@@ -128,7 +130,7 @@ func (db *Database) DeleteEntry(id string) error {
 	return err
 }
 
-func (db *Database) GetEntriesForDate(date time.Time) ([]LogEntry, error) {
+func (db *Database) GetEntriesForDate(date time.Time) ([]model.LogEntry, error) {
 	dateStr := date.Format("2006-01-02")
 	rows, err := db.conn.Query(`
 		SELECT id, date, time, location, tag, title, content, metadata
@@ -141,9 +143,9 @@ func (db *Database) GetEntriesForDate(date time.Time) ([]LogEntry, error) {
 	}
 	defer rows.Close()
 
-	var entries []LogEntry
+	var entries []model.LogEntry
 	for rows.Next() {
-		var e LogEntry
+		var e model.LogEntry
 		var dateStr, timeStr string
 		var loc, tag, title, metadata sql.NullString
 
@@ -173,7 +175,7 @@ func (db *Database) GetEntriesForDate(date time.Time) ([]LogEntry, error) {
 	return entries, nil
 }
 
-func (db *Database) SearchEntries(query string) ([]SearchResult, error) {
+func (db *Database) SearchEntries(query string) ([]model.SearchResult, error) {
 	if query == "" {
 		return nil, nil
 	}
@@ -191,7 +193,7 @@ func (db *Database) SearchEntries(query string) ([]SearchResult, error) {
 	}
 	defer rows.Close()
 
-	var results []SearchResult
+	var results []model.SearchResult
 	var currentDate string
 	entryIndex := 0
 
@@ -209,15 +211,10 @@ func (db *Database) SearchEntries(query string) ([]SearchResult, error) {
 		}
 
 		date, _ := time.Parse("2006-01-02", dateStr)
-		results = append(results, SearchResult{Date: date, EntryIndex: entryIndex})
+		results = append(results, model.SearchResult{Date: date, EntryIndex: entryIndex})
 	}
 
 	return results, nil
-}
-
-type SearchResult struct {
-	Date       time.Time
-	EntryIndex int
 }
 
 func (db *Database) SetSummary(date time.Time, text string) error {
