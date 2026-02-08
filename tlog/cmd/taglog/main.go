@@ -1,0 +1,36 @@
+package main
+
+import (
+	"fmt"
+	"os"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	"tlog/internal/db"
+)
+
+func main() {
+	database, err := db.OpenDatabase("logs.db")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to open database: %v\n", err)
+		os.Exit(1)
+	}
+	defer database.Close()
+
+	m := NewModel(database)
+
+	p := tea.NewProgram(m, tea.WithAltScreen())
+
+	finalModel, err := p.Run()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error running program: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Syncing database to markdown for git...")
+	if fm, ok := finalModel.(Model); ok {
+		if err := fm.db.ExportToMarkdown("archive.md"); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to export markdown: %v\n", err)
+		}
+	}
+}

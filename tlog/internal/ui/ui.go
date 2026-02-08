@@ -1,10 +1,13 @@
 package ui
 
 import (
+	"fmt"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"strings"
 
+	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -112,6 +115,41 @@ func PadRight(s string, width int) string {
 		return s
 	}
 	return s + strings.Repeat(" ", width-visibleLen)
+}
+
+var linkRe = regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
+
+// ExtractLinks finds [text](url) patterns, replaces with "text [N]", and collects URLs.
+func ExtractLinks(content string) (string, []string) {
+	var links []string
+	result := linkRe.ReplaceAllStringFunc(content, func(match string) string {
+		parts := linkRe.FindStringSubmatch(match)
+		if len(parts) < 3 {
+			return match
+		}
+		links = append(links, parts[2])
+		return fmt.Sprintf("%s [%d]", parts[1], len(links))
+	})
+	return result, links
+}
+
+// RenderMarkdown renders markdown content to styled terminal output via glamour.
+func RenderMarkdown(content string, width int) string {
+	r, err := glamour.NewTermRenderer(
+		glamour.WithAutoStyle(),
+		glamour.WithWordWrap(width),
+	)
+	if err != nil {
+		return content
+	}
+
+	out, err := r.Render(content)
+	if err != nil {
+		return content
+	}
+
+	// Trim trailing whitespace glamour adds
+	return strings.TrimRight(out, "\n")
 }
 
 func OpenURL(url string) {

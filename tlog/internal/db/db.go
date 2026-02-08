@@ -250,6 +250,67 @@ func (db *Database) GetAllSummaries() (map[string]string, error) {
 	return summaries, nil
 }
 
+func (db *Database) GetAllUniqueTags() ([]string, error) {
+	rows, err := db.conn.Query(`SELECT DISTINCT tag FROM logs WHERE tag IS NOT NULL ORDER BY tag`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tags []string
+	for rows.Next() {
+		var tag string
+		if err := rows.Scan(&tag); err != nil {
+			return nil, err
+		}
+		tags = append(tags, tag)
+	}
+	return tags, nil
+}
+
+func (db *Database) GetEntriesByTag(tag string) ([]model.LogEntry, error) {
+	rows, err := db.conn.Query(`
+		SELECT id, date, time, location, tag, title, content, metadata
+		FROM logs
+		WHERE tag = ?
+		ORDER BY date DESC, time DESC
+	`, tag)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []model.LogEntry
+	for rows.Next() {
+		var e model.LogEntry
+		var dateStr, timeStr string
+		var loc, tagVal, title, metadata sql.NullString
+
+		err := rows.Scan(&e.ID, &dateStr, &timeStr, &loc, &tagVal, &title, &e.Content, &metadata)
+		if err != nil {
+			return nil, err
+		}
+
+		e.Date, _ = time.Parse("2006-01-02", dateStr)
+		e.Time, _ = time.Parse("15:04:05", timeStr)
+		if loc.Valid {
+			e.Location = loc.String
+		}
+		if tagVal.Valid {
+			e.Tag = &tagVal.String
+		}
+		if title.Valid {
+			e.Title = &title.String
+		}
+		if metadata.Valid {
+			json.Unmarshal([]byte(metadata.String), &e.Metadata)
+		}
+
+		entries = append(entries, e)
+	}
+	return entries, nil
+}
+
 func (db *Database) ExportToMarkdown(path string) error {
 	rows, err := db.conn.Query(`
 		SELECT date, time, location, tag, title, content, metadata
