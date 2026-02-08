@@ -114,13 +114,13 @@ local function set_nx_bufmaps(bufnr)
     return
   end
   local opts = { buffer = bufnr }
-  vim.keymap.set('n', '<leader>db', function()
+  vim.keymap.set('n', '<leader>nb', function()
     nx_run_target('build')
-  end, vim.tbl_extend('force', { desc = 'NX: build project for current buffer' }, opts))
-  vim.keymap.set('n', '<leader>dt', function()
+  end, vim.tbl_extend('force', { desc = 'NX: build project' }, opts))
+  vim.keymap.set('n', '<leader>nt', function()
     nx_run_target('test')
-  end, vim.tbl_extend('force', { desc = 'NX: test project for current buffer' }, opts))
-  vim.keymap.set('n', '<leader>dr', function()
+  end, vim.tbl_extend('force', { desc = 'NX: test project' }, opts))
+  vim.keymap.set('n', '<leader>nr', function()
     dotnet_restore_for_buf(bufnr)
   end, vim.tbl_extend('force', { desc = 'dotnet: restore' }, opts))
 end
