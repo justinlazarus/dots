@@ -22,8 +22,8 @@ vim.pack.add {
 vim.api.nvim_create_autocmd('VimEnter', {
   callback = function()
     -- Check if parsers need to be installed (only once)
-    local parser_install_file = vim.fn.stdpath('data') .. '/treesitter_parsers_installed'
-    
+    local parser_install_file = vim.fn.stdpath 'data' .. '/treesitter_parsers_installed'
+
     if vim.fn.filereadable(parser_install_file) == 0 then
       -- First time setup - install parsers
       local ok, install = pcall(require, 'nvim-treesitter.install')
@@ -46,19 +46,19 @@ vim.api.nvim_create_autocmd('VimEnter', {
           'xml',
           'yaml',
         }, { summary = false })
-        
+
         -- Create marker file to prevent reinstallation
         vim.fn.writefile({}, parser_install_file)
       end
     end
-    
+
     -- Setup Treesitter configuration
     local ok, configs = pcall(require, 'nvim-treesitter.configs')
     if ok then
       configs.setup {
         -- Don't auto-install to prevent compilation on every load
         auto_install = false,
-        
+
         -- Enable syntax highlighting
         highlight = {
           enable = true,
@@ -71,14 +71,14 @@ vim.api.nvim_create_autocmd('VimEnter', {
             end
           end,
         },
-        
+
         -- Enable better indentation
         indent = {
           enable = true,
         },
       }
     end
-    
+
     -- Use bash parser for zsh files (no dedicated zsh parser exists)
     vim.treesitter.language.register('bash', 'zsh')
   end,
@@ -156,8 +156,8 @@ end, { desc = 'File Explorer' })
 
 -- find
 map('n', '<leader>fb', '<cmd>FzfLua buffers<cr>', { desc = 'Buffers' })
-map('n', '<leader>fc', function() 
-  require('fzf-lua').files({ cwd = vim.fn.stdpath('config') })
+map('n', '<leader>fc', function()
+  require('fzf-lua').files { cwd = vim.fn.stdpath 'config' }
 end, { desc = 'Find Config File' })
 map('n', '<leader>ff', '<cmd>FzfLua files<cr>', { desc = 'Find Files' })
 map('n', '<leader>fg', '<cmd>FzfLua git_files<cr>', { desc = 'Find Git Files' })
@@ -204,8 +204,8 @@ map('n', '<leader>uC', '<cmd>FzfLua colorschemes<cr>', { desc = 'Colorschemes' }
 -- LSP-related pickers
 map('n', 'gd', '<cmd>FzfLua lsp_definitions<cr>', { desc = 'Goto Definition' })
 map('n', 'gD', '<cmd>FzfLua lsp_declarations<cr>', { desc = 'Goto Declaration' })
-map('n', 'gr', '<cmd>FzfLua lsp_references<cr>', { nowait = true, desc = 'References' })
-map('n', 'gI', '<cmd>FzfLua lsp_implementations<cr>', { desc = 'Goto Implementation' })
+map('n', 'grr', '<cmd>FzfLua lsp_references<cr>', { nowait = true, desc = 'References' })
+map('n', 'gri', '<cmd>FzfLua lsp_implementations<cr>', { desc = 'Goto Implementation' })
 map('n', 'gy', '<cmd>FzfLua lsp_typedefs<cr>', { desc = 'Goto Type Definition' })
 map('n', '<leader>ss', '<cmd>FzfLua lsp_document_symbols<cr>', { desc = 'LSP Symbols' })
 map('n', '<leader>sS', '<cmd>FzfLua lsp_workspace_symbols<cr>', { desc = 'LSP Workspace Symbols' })
@@ -266,15 +266,15 @@ require('conform').setup {
 
     return { timeout_ms = 3000, lsp_format = 'fallback' }
   end,
-  formatters_by_ft = { 
-    lua = { 'stylua' }, 
+  formatters_by_ft = {
+    lua = { 'stylua' },
     cs = { 'csharpier' },
     yaml = { 'yamlfmt' },
   },
   formatters = {
     csharpier = {
-      command = "csharpier",
-      args = { "format", "--write-stdout" },
+      command = 'csharpier',
+      args = { 'format', '--write-stdout' },
       stdin = true,
     },
   },
