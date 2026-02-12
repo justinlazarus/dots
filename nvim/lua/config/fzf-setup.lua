@@ -56,7 +56,10 @@ fzf.setup {
   grep = {
     prompt = 'Rg❯ ',
     input_prompt = 'Grep For❯ ',
+    -- Keep your existing rg_opts
     rg_opts = '--column --line-number --no-heading --color=always --smart-case --max-columns=4096 -e',
+    rg_glob = true, -- ADD THIS: Enables the -- separator
+    glob_separator = ' --', -- ADD THIS: Defines the separator
   },
 }
 
@@ -65,7 +68,7 @@ local map = vim.keymap.set
 -- Top Pickers & Explorer
 map('n', '<leader><space>', '<cmd>FzfLua files<cr>', { desc = 'Smart Find Files' })
 map('n', '<leader>,', '<cmd>FzfLua buffers<cr>', { desc = 'Buffers' })
-map('n', '<leader>/', '<cmd>FzfLua live_grep<cr>', { desc = 'Grep' })
+map('n', '<leader>/', '<cmd>FzfLua live_grep_native<cr>', { desc = 'Grep' })
 map('n', '<leader>:', '<cmd>FzfLua command_history<cr>', { desc = 'Command History' })
 map('n', '<leader>n', '<cmd>FzfLua<cr>', { desc = 'All Pickers' })
 

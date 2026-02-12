@@ -6,6 +6,9 @@ dap.adapters.coreclr = {
   type = 'executable',
   command = 'netcoredbg',
   args = { '--interpreter=vscode' },
+  options = {
+    detached = false,
+  },
 }
 
 -- C# launch config
@@ -31,6 +34,20 @@ dap.configurations.cs = {
     processId = function()
       return require('dap.utils').pick_process { filter = 'dotnet' }
     end,
+    cwd = function()
+      return vim.fn.getcwd()
+    end,
+    justMyCode = false,
+    stopAtEntry = false,
+  },
+  {
+    type = 'coreclr',
+    name = 'Attach to Shipping API',
+    request = 'attach',
+    processId = 41442, -- The PID we found running
+    cwd = '/Users/jlazarus/work/repos/1400196-close-load/intl-depot/apps/Costco.I18N.Depot.Shipping.Api',
+    justMyCode = false,
+    stopAtEntry = false,
   },
 }
 

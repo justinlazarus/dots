@@ -43,6 +43,10 @@ export HOMEBREW_PREFIX="/opt/homebrew"
 
 export PATH="/Users/jlazarus/.cargo/bin:$PATH"
 
+export PATH="/opt/homebrew/bin/go:$PATH"
+export PATH="$HOME/go/bin:$PATH"
+
+
 export EDITOR=neovim
 
 # =========================================
@@ -86,10 +90,10 @@ fi
 # =========================================
 # Certs
 # =========================================
-#export NODE_EXTRA_CA_CERTS=/Users/jlazarus/costco-certs.pem
-#export SSL_CERT_FILE=/Users/jlazarus/costco-certs.pem
-REQUESTS_CA_BUNDLE=/Users/jlazarus/.ssh/cacert.pem
-export NODE_EXTRA_CA_CERTS="$HOME/work/certs/Certificates.pem"
+export REQUESTS_CA_BUNDLE=/Users/jlazarus/.ssh/cacert.pem
+export NODE_EXTRA_CA_CERTS="$HOME/work/certs/costcoroot.pem"
+export ENV REQUESTS_CA_BUNDLE="$HOME/work/certs/costcoroot.pem"
+export ENV CURL_CA_BUNDLE="$HOME/work/certs/costcoroot.pem"
 
 # =========================================
 # Aliases
