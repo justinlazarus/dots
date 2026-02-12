@@ -214,6 +214,7 @@ require('conform').setup {
   },
   formatters = {
     csharpier = {
+      inherit = false,
       command = 'csharpier',
       args = { 'format', '--write-stdout' },
       stdin = true,
