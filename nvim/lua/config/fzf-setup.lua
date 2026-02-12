@@ -7,8 +7,8 @@ local fzf = require 'fzf-lua'
 fzf.setup {
   'default-title',
   winopts = {
-    height = 0.85,
-    width = 0.80,
+    height = 0.95,
+    width = 0.95,
     row = 0.35,
     col = 0.50,
     border = 'rounded',
@@ -16,6 +16,14 @@ fzf.setup {
       border = 'border',
       wrap = 'nowrap',
       hidden = 'nohidden',
+      horizontal = 'right:60%',
+    },
+  },
+  previewers = {
+    builtin = {
+      title_fnamemodify = function(s)
+        return vim.fn.fnamemodify(s, ':~:.')
+      end,
     },
   },
   keymap = {
@@ -56,10 +64,7 @@ fzf.setup {
   grep = {
     prompt = 'Rg❯ ',
     input_prompt = 'Grep For❯ ',
-    -- Keep your existing rg_opts
-    rg_opts = '--column --line-number --no-heading --color=always --smart-case --max-columns=4096 -e',
-    rg_glob = true, -- ADD THIS: Enables the -- separator
-    glob_separator = ' --', -- ADD THIS: Defines the separator
+    formatter = 'path.filename_first',
   },
 }
 
