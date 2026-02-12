@@ -64,6 +64,10 @@
       "rev": "8dcb311",
       "src": "https://github.com/nvim-tree/nvim-web-devicons"
     },
+    "nx.nvim": {
+      "rev": "f8a3a21b3d540889401a40d1f2803083794c0372",
+      "src": "https://github.com/Equilibris/nx.nvim"
+    },
     "oil.nvim": {
       "rev": "7e1cd77",
       "src": "https://github.com/stevearc/oil.nvim"
@@ -78,7 +82,11 @@
     },
     "snacks.nvim": {
       "rev": "dec29f5",
-      "src": "https://github.com/folke/snacks.nvim"
+      "src": "https://github.com/folke/snacks.nvim.git"
+    },
+    "telescope.nvim": {
+      "rev": "ad7d9580338354ccc136e5b8f0aa4f880434dcdc",
+      "src": "https://github.com/nvim-telescope/telescope.nvim"
     },
     "tokyonight.nvim": {
       "rev": "5da1b76e64daf4c5d410f06bcb6b9cb640da7dfd",

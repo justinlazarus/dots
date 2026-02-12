@@ -7,8 +7,20 @@ vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower win
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 vim.keymap.set('n', '<leader>fe', '<cmd>Oil<CR>', { desc = '[F]ilesystem [E]xplore' })
 
--- Load dotnet/NX buffer-local mappings and autocommands
-local ok, dotnet = pcall(require, 'config.dotnet')
-if ok and type(dotnet.setup) == 'function' then
-  pcall(dotnet.setup)
-end
+---------------------------------------------------------------------------------------------------- vim.pack
+vim.api.nvim_create_user_command('UpdateAll', function()
+  print 'Updating plugins...'
+  vim.pack.update()
+
+  local ok, ts_install = pcall(require, 'nvim-treesitter.install')
+  if ok then
+    print 'Updating Treesitter parsers...'
+    ts_install.update { with_sync = true }
+  end
+
+  print 'Update complete!'
+end, { desc = 'Update plugins and Treesitter parsers' })
+
+vim.keymap.set('n', '<leader>op', function()
+  Snacks.picker.files { cmd = 'dotnet', args = { 'list', 'project' } }
+end, { desc = 'Dotnet: List Projects' })

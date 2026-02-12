@@ -1,7 +1,6 @@
 vim.pack.add {
   'https://github.com/nvim-treesitter/nvim-treesitter',
   'https://github.com/williamboman/mason.nvim',
-  'https://github.com/folke/snacks.nvim',
   'https://github.com/folke/which-key.nvim',
   'https://github.com/L3MON4D3/LuaSnip',
   'https://github.com/folke/lazydev.nvim',
@@ -19,73 +18,45 @@ vim.pack.add {
 }
 
 --------------------------------------------------------------------------------------------------- treesitter
+local ok, configs = pcall(require, 'nvim-treesitter.configs')
+if ok then
+  configs.setup {
+    ensure_installed = {
+      'bash',
+      'c_sharp',
+      'css',
+      'diff',
+      'html',
+      'javascript',
+      'json',
+      'lua',
+      'markdown',
+      'powershell',
+      'tsx',
+      'typescript',
+      'vim',
+      'vimdoc',
+      'xml',
+      'yaml',
+    },
+    sync_install = false,
+    auto_install = true,
 
--- Configure Treesitter after plugins are loaded
-vim.api.nvim_create_autocmd('VimEnter', {
-  callback = function()
-    -- Check if parsers need to be installed (only once)
-    local parser_install_file = vim.fn.stdpath 'data' .. '/treesitter_parsers_installed'
+    highlight = {
+      enable = true,
+      disable = function(lang, buf)
+        local max_filesize = 100 * 1024 -- 100 KB
+        local ok_stat, stats = pcall(vim.loop.fs_stat, vim.api.nvim_buf_get_name(buf))
+        if ok_stat and stats and stats.size > max_filesize then
+          return true
+        end
+      end,
+    },
+    indent = { enable = true },
+  }
+end
 
-    if vim.fn.filereadable(parser_install_file) == 0 then
-      -- First time setup - install parsers
-      local ok, install = pcall(require, 'nvim-treesitter.install')
-      if ok then
-        install.install({
-          'bash',
-          'c_sharp',
-          'css',
-          'diff',
-          'html',
-          'javascript',
-          'json',
-          'lua',
-          'markdown',
-          'powershell',
-          'tsx',
-          'typescript',
-          'vim',
-          'vimdoc',
-          'xml',
-          'yaml',
-        }, { summary = false })
-
-        -- Create marker file to prevent reinstallation
-        vim.fn.writefile({}, parser_install_file)
-      end
-    end
-
-    -- Setup Treesitter configuration
-    local ok, configs = pcall(require, 'nvim-treesitter.configs')
-    if ok then
-      configs.setup {
-        -- Don't auto-install to prevent compilation on every load
-        auto_install = false,
-
-        -- Enable syntax highlighting
-        highlight = {
-          enable = true,
-          -- Disable for large files to improve performance
-          disable = function(lang, buf)
-            local max_filesize = 100 * 1024 -- 100 KB
-            local ok_stat, stats = pcall(vim.loop.fs_stat, vim.api.nvim_buf_get_name(buf))
-            if ok_stat and stats and stats.size > max_filesize then
-              return true
-            end
-          end,
-        },
-
-        -- Enable better indentation
-        indent = {
-          enable = true,
-        },
-      }
-    end
-
-    -- Use bash parser for zsh files (no dedicated zsh parser exists)
-    vim.treesitter.language.register('bash', 'zsh')
-  end,
-})
-
+vim.treesitter.language.register('bash', 'zsh')
 -------------------------------------------------------------------------------------------------------- mason
 
 -- Mason manages LSP servers, DAP servers, linters, and formatters
@@ -126,30 +97,6 @@ vim.schedule(function()
   ensure_installed 'gopls' -- Go
   ensure_installed 'netcoredbg' -- C# debugger
 end)
-
-------------------------------------------------------------------------------------------------------- snacks
-
--- Snacks setup (keeping everything except picker)
-local Snacks = require 'snacks'
-Snacks.setup {
-  bigfile = {},
-  dashboard = {},
-  explorer = {},
-  indent = {},
-  input = {},
-  -- picker = {}, -- REMOVED - using fzf-lua instead
-  notifier = {},
-  quickfile = {},
-  scope = {},
-  statuscolumn = {},
-  words = {},
-}
-
--- Snacks explorer
-local map = vim.keymap.set
-map('n', '<leader>e', function()
-  Snacks.explorer()
-end, { desc = 'File Explorer' })
 
 -----------------------------------------------------------------------------------------------------which-key
 
