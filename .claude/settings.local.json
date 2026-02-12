@@ -6,7 +6,8 @@
       "WebFetch(domain:ghostty.org)",
       "Bash(ghostty +help:*)",
       "Bash(ghostty +show-config:*)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "Bash(python3:*)"
     ]
   }
 }

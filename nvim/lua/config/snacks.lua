@@ -181,6 +181,11 @@ map('n', '<leader>uC', function()
   Snacks.picker.colorschemes()
 end, { desc = 'Colorschemes' })
 
+-- Nx
+map('n', '<leader>ox', function()
+  require('config.dotnet').nx_picker()
+end, { desc = 'NX: pick target' })
+
 -- LSP pickers
 map('n', 'gd', function()
   Snacks.picker.lsp_definitions()
