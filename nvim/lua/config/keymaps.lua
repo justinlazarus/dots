@@ -24,3 +24,17 @@ end, { desc = 'Update plugins and Treesitter parsers' })
 vim.keymap.set('n', '<leader>op', function()
   Snacks.picker.files { cmd = 'dotnet', args = { 'list', 'project' } }
 end, { desc = 'Dotnet: List Projects' })
+
+-- Copy absolute path to clipboard
+vim.keymap.set('n', '<leader>fp', function()
+  local path = vim.fn.expand '%:p'
+  vim.fn.setreg('+', path)
+  Snacks.notify.info('Copied absolute path: ' .. path)
+end, { desc = 'Copy absolute [P]ath' })
+
+-- Copy filename only to clipboard
+vim.keymap.set('n', '<leader>fn', function()
+  local name = vim.fn.expand '%:t'
+  vim.fn.setreg('+', name)
+  Snacks.notify.info('Copied file [N]ame: ' .. name)
+end, { desc = 'Copy file [N]ame' })
