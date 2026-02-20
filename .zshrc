@@ -90,10 +90,6 @@ fi
 # =========================================
 # Certs
 # =========================================
-export REQUESTS_CA_BUNDLE=/Users/jlazarus/.ssh/cacert.pem
-export NODE_EXTRA_CA_CERTS="$HOME/work/certs/costcoroot.pem"
-export ENV REQUESTS_CA_BUNDLE="$HOME/work/certs/costcoroot.pem"
-export ENV CURL_CA_BUNDLE="$HOME/work/certs/costcoroot.pem"
 
 # =========================================
 # Aliases
@@ -115,6 +111,7 @@ alias ..='cd ..'
 
 alias code="code-insiders"
 alias stoptanium='sudo launchctl unload /Library/LaunchDaemons/com.tanium.taniumclient.plist'
+alias chobster-dash='~/chobster/venv/bin/python ~/chobster/dashboard.py'
 
 # =========================================
 # Prompt Configuration
@@ -137,3 +134,14 @@ fpath=(/Users/jlazarus/.docker/completions $fpath)
 autoload -Uz compinit
 compinit
 # End of Docker CLI completions
+#
+
+
+# =========================================
+# Prompt Configuration
+# =========================================
+
+export WLR_NO_HARDWARE_CURSORS=1
+export OLLAMA_FLASH_ATTENTION=1
+export OLLAMA_HOST=100.79.200.80
+export PATH="$HOME/.local/share/bob/nvim-bin:$HOME/.local/bin:$PATH"
