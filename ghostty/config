@@ -4,6 +4,8 @@ copy-on-select = clipboard
 clipboard-paste-protection = false
 clipboard-write = allow
 app-notifications = no-clipboard-copy
+term = xterm-256color
+macos-titlebar-style = hidden
 
 # Tokyo Night Storm theme
 background = #24283b
@@ -30,6 +32,3 @@ palette = 12=#7aa2f7
 palette = 13=#bb9af7
 palette = 14=#7dcfff
 palette = 15=#c0caf5
-
-# Hide title bar for macOS
-macos-titlebar-style = hidden

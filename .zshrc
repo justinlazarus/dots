@@ -1,7 +1,6 @@
 # =========================================
 # Shell Configuration
 # =========================================
-# Enable vim mode for command line editing
 bindkey -v
 
 # =========================================
@@ -12,15 +11,13 @@ SAVEHIST=10000
 HISTFILE=~/.zsh_history
 setopt HIST_VERIFY
 setopt SHARE_HISTORY
-setopt APPEND_HISTORY
-setopt INC_APPEND_HISTORY
-setopt HIST_IGNORE_DUPS
 setopt HIST_IGNORE_ALL_DUPS
 setopt HIST_REDUCE_BLANKS
 
 # =========================================
 # Auto Complete Configuration
 # =========================================
+fpath=($HOME/.docker/completions $fpath)
 autoload -Uz compinit && compinit
 setopt AUTO_MENU
 setopt COMPLETE_IN_WORD
@@ -32,22 +29,23 @@ setopt PUSHD_IGNORE_DUPS
 # =========================================
 # PATH Configuration
 # =========================================
-# Add Neovim Mason binaries to PATH
-export PATH="$HOME/.local/share/nvim/mason/bin:$PATH"
-
-# Add Homebrew to PATH
-export PATH="/opt/homebrew/bin:$PATH"
-
-# Set Homebrew prefix for Apple Silicon Macs
 export HOMEBREW_PREFIX="/opt/homebrew"
-
-export PATH="/Users/jlazarus/.cargo/bin:$PATH"
-
-export PATH="/opt/homebrew/bin/go:$PATH"
+export PATH="$HOME/.local/bin:$HOME/dots/utils:$HOME/.local/share/nvim/mason/bin:$PATH"
+export PATH="$HOMEBREW_PREFIX/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
 export PATH="$HOME/go/bin:$PATH"
+export PATH="$HOME/.opencode/bin:$PATH"
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
 
-
-export EDITOR=neovim
+# =========================================
+# Environment Variables
+# =========================================
+unset CI
+export EDITOR=nvim
+export COLORTERM=truecolor
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
 
 # =========================================
 # Node.js (NVM) Configuration
@@ -70,31 +68,28 @@ export Database__ReadOnlyDepotDbConnectionString="Server=localhost,1433;Database
 export DOTNET_ConnectionStrings__Database="${DOTNET_ConnectionStrings__Database:-Data Source=localhost,1433;Database=intl-depot-db;Integrated Security=false;User ID=SA;Password=Intl@depot1;TrustServerCertificate=True;}"
 export DOTNET_MessagingOptions__Namespace="${DOTNET_MessagingOptions__Namespace:-amqp://guest:guest@localhost:5672/}"
 export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317"
+export OTEL_SERVICE_NAME="Depot"
 export ASPNETCORE_ENVIRONMENT=Development
 
 # =========================================
 # Angular Development Environment Variables
 # =========================================
-export CI=true
 export KARMA_LOG_LEVEL="ERROR"
 export NG_CLI_ANALYTICS=false
 
 # =========================================
 # Tool Integrations
 # =========================================
-# Set up fzf key bindings and fuzzy completion (check if fzf exists first)
 if command -v fzf >/dev/null 2>&1; then
     source <(fzf --zsh)
 fi
 
-# =========================================
-# Certs
-# =========================================
+# Bun completions
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
 # =========================================
 # Aliases
 # =========================================
-# Enhanced ls with details and formatting (fallback to ls if eza not available)
 if command -v eza >/dev/null 2>&1; then
     alias ls='eza --icons'
     alias l='eza -la --icons'
@@ -105,10 +100,8 @@ else
     alias ll='ls -la'
 fi
 
-# FZF with preview functionality
 alias ff="fzf --style full --preview 'fzf-preview.sh {}'"
 alias ..='cd ..'
-
 alias code="code-insiders"
 alias stoptanium='sudo launchctl unload /Library/LaunchDaemons/com.tanium.taniumclient.plist'
 alias chobster-dash='~/chobster/venv/bin/python ~/chobster/dashboard.py'
@@ -116,7 +109,6 @@ alias chobster-dash='~/chobster/venv/bin/python ~/chobster/dashboard.py'
 # =========================================
 # Prompt Configuration
 # =========================================
-# Set prompt to [user :: cwd] with username in gitmux green (#9ece6a)
 PROMPT='[ %F{#9ece6a}%n%f :: %~ ] '
 
 # opencode
@@ -145,3 +137,5 @@ export WLR_NO_HARDWARE_CURSORS=1
 export OLLAMA_FLASH_ATTENTION=1
 export OLLAMA_HOST=100.79.200.80
 export PATH="$HOME/.local/share/bob/nvim-bin:$HOME/.local/bin:$PATH"
+=======
+>>>>>>> e35fc5afbbb1251e7d61e1065d6a4a0ad50a5021
