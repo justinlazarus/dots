@@ -78,13 +78,6 @@ export KARMA_LOG_LEVEL="ERROR"
 export NG_CLI_ANALYTICS=false
 
 # =========================================
-# Certs
-# =========================================
-export REQUESTS_CA_BUNDLE="/opt/homebrew/etc/openssl@3/cert.pem"
-export NODE_EXTRA_CA_CERTS="/opt/homebrew/etc/openssl@3/cert.pem"
-export CURL_CA_BUNDLE="/opt/homebrew/etc/openssl@3/cert.pem"
-
-# =========================================
 # Tool Integrations
 # =========================================
 if command -v fzf >/dev/null 2>&1; then
@@ -110,12 +103,38 @@ fi
 alias ff="fzf --style full --preview 'fzf-preview.sh {}'"
 alias ..='cd ..'
 alias stoptanium='sudo launchctl unload /Library/LaunchDaemons/com.tanium.taniumclient.plist'
+alias chobster-dash='~/chobster/venv/bin/python ~/chobster/dashboard.py'
 
 # =========================================
 # Prompt Configuration
 # =========================================
 PROMPT='[ %F{#9ece6a}%n%f :: %~ ] '
 
-
 # Load Angular CLI autocompletion.
 source <(ng completion script)
+# opencode
+export PATH=/Users/jlazarus/.opencode/bin:$PATH
+
+# bun completions
+[ -s "/Users/jlazarus/.bun/_bun" ] && source "/Users/jlazarus/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+# The following lines have been added by Docker Desktop to enable Docker CLI completions.
+fpath=(/Users/jlazarus/.docker/completions $fpath)
+autoload -Uz compinit
+compinit
+# End of Docker CLI completions
+#
+
+
+# =========================================
+# Prompt Configuration
+# =========================================
+
+export WLR_NO_HARDWARE_CURSORS=1
+export OLLAMA_FLASH_ATTENTION=1
+export OLLAMA_HOST=100.79.200.80
+export PATH="$HOME/.local/share/bob/nvim-bin:$HOME/.local/bin:$PATH"
