@@ -109,10 +109,13 @@ fi
 
 alias ff="fzf --style full --preview 'fzf-preview.sh {}'"
 alias ..='cd ..'
-alias code="code-insiders"
 alias stoptanium='sudo launchctl unload /Library/LaunchDaemons/com.tanium.taniumclient.plist'
 
 # =========================================
 # Prompt Configuration
 # =========================================
 PROMPT='[ %F{#9ece6a}%n%f :: %~ ] '
+
+
+# Load Angular CLI autocompletion.
+source <(ng completion script)

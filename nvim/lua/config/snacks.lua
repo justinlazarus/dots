@@ -9,6 +9,28 @@ Snacks.setup {
   picker = {
     enabled = true,
     ui_select = true,
+    win = {
+      input = {
+        keys = {
+          -- Workaround for Neovim 0.12-dev prompt buffer regression
+          -- where backspace can't delete the first character
+          ['<BS>'] = {
+            function(self)
+              local win = vim.api.nvim_get_current_win()
+              local buf = vim.api.nvim_win_get_buf(win)
+              local col = vim.api.nvim_win_get_cursor(win)[2]
+              if col == 0 then return end
+              local line = (vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] or '')
+              local new_line = line:sub(1, col - 1) .. line:sub(col + 1)
+              vim.api.nvim_buf_set_lines(buf, 0, -1, false, { new_line })
+              vim.api.nvim_win_set_cursor(win, { 1, col - 1 })
+            end,
+            mode = { 'i' },
+            desc = 'backspace (fix prompt buffer)',
+          },
+        },
+      },
+    },
     layout = {
       layout = {
         box = 'horizontal',
@@ -41,7 +63,7 @@ Snacks.setup {
   input = { enabled = true },
   notifier = { enabled = true },
   quickfile = { enabled = true },
-  scroll = { enabled = true },
+  scroll = { enabled = false },
   statuscolumn = { enabled = true },
   words = { enabled = true },
 }
@@ -147,9 +169,6 @@ end, { desc = 'Help Pages' })
 map('n', '<leader>sH', function()
   Snacks.picker.highlights()
 end, { desc = 'Highlights' })
-map('n', '<leader>si', function()
-  Snacks.picker()
-end, { desc = 'All Pickers' })
 map('n', '<leader>sj', function()
   Snacks.picker.jumps()
 end, { desc = 'Jumps' })
@@ -165,9 +184,6 @@ end, { desc = 'Marks' })
 map('n', '<leader>sM', function()
   Snacks.picker.man()
 end, { desc = 'Man Pages' })
-map('n', '<leader>sp', function()
-  Snacks.picker()
-end, { desc = 'All Pickers' })
 map('n', '<leader>sq', function()
   Snacks.picker.qflist()
 end, { desc = 'Quickfix List' })
