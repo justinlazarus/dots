@@ -4,6 +4,14 @@
 bindkey -v
 
 # =========================================
+# OS Detection
+# =========================================
+case "$(uname -s)" in
+    Darwin) IS_MAC=true ;;
+    Linux)  IS_LINUX=true ;;
+esac
+
+# =========================================
 # History Configuration
 # =========================================
 HISTSIZE=10000
@@ -17,7 +25,7 @@ setopt HIST_REDUCE_BLANKS
 # =========================================
 # Auto Complete Configuration
 # =========================================
-fpath=($HOME/.docker/completions $fpath)
+[[ -d "$HOME/.docker/completions" ]] && fpath=($HOME/.docker/completions $fpath)
 autoload -Uz compinit && compinit
 setopt AUTO_MENU
 setopt COMPLETE_IN_WORD
@@ -29,12 +37,17 @@ setopt PUSHD_IGNORE_DUPS
 # =========================================
 # PATH Configuration
 # =========================================
-export HOMEBREW_PREFIX="/opt/homebrew"
+if [[ $IS_MAC ]]; then
+    export HOMEBREW_PREFIX="/opt/homebrew"
+    export PATH="$HOMEBREW_PREFIX/bin:$PATH"
+fi
+
 export PATH="$HOME/.local/bin:$HOME/dots/utils:$HOME/.local/share/nvim/mason/bin:$PATH"
-export PATH="$HOMEBREW_PREFIX/bin:$PATH"
+export PATH="$HOME/.local/share/bob/nvim-bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 export PATH="$HOME/go/bin:$PATH"
 export PATH="$HOME/.opencode/bin:$PATH"
+
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
@@ -48,20 +61,25 @@ export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 
 # =========================================
-# Node.js (NVM) Configuration
+# Node.js (NVM) - Lazy Loaded
 # =========================================
 export NVM_DIR="$HOME/.nvm"
-# Lazy load nvm for faster shell startup
 nvm() {
     unset -f nvm
-    [ -s "$HOMEBREW_PREFIX/opt/nvm/nvm.sh" ] && \. "$HOMEBREW_PREFIX/opt/nvm/nvm.sh"
-    [ -s "$HOMEBREW_PREFIX/opt/nvm/etc/bash_completion.d/nvm" ] && \. "$HOMEBREW_PREFIX/opt/nvm/etc/bash_completion.d/nvm"
+    if [[ $IS_MAC ]]; then
+        [ -s "$HOMEBREW_PREFIX/opt/nvm/nvm.sh" ] && \. "$HOMEBREW_PREFIX/opt/nvm/nvm.sh"
+        [ -s "$HOMEBREW_PREFIX/opt/nvm/etc/bash_completion.d/nvm" ] && \. "$HOMEBREW_PREFIX/opt/nvm/etc/bash_completion.d/nvm"
+    else
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+    fi
     nvm "$@"
 }
 
 # =========================================
 # .NET Development Environment Variables
 # =========================================
+# TODO: Move these to a .env file or secrets manager
 export CWIMS_ADMIN_PASSWORD="Costco123@"
 export Database__DepotDbConnectionString="Server=localhost,1433;Database=depot-db;User Id=sa;Password=Costco12345@;TrustServerCertificate=true;Encrypt=false;"
 export Database__ReadOnlyDepotDbConnectionString="Server=localhost,1433;Database=depot-db;User Id=sa;Password=Costco12345@;TrustServerCertificate=true;Encrypt=false;"
@@ -84,7 +102,6 @@ if command -v fzf >/dev/null 2>&1; then
     source <(fzf --zsh)
 fi
 
-# Bun completions
 [ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
 # =========================================
@@ -103,39 +120,26 @@ fi
 alias ff="fzf --style full --preview 'fzf-preview.sh {}'"
 alias ..='cd ..'
 alias code="code-insiders"
-alias stoptanium='sudo launchctl unload /Library/LaunchDaemons/com.tanium.taniumclient.plist'
 alias chobster-dash='~/chobster/venv/bin/python ~/chobster/dashboard.py'
 
-# =========================================
-# Prompt Configuration
-# =========================================
-PROMPT='[ %F{#9ece6a}%n%f :: %~ ] '
-
-# opencode
-export PATH=/Users/jlazarus/.opencode/bin:$PATH
-
-# bun completions
-[ -s "/Users/jlazarus/.bun/_bun" ] && source "/Users/jlazarus/.bun/_bun"
-
-# bun
-export BUN_INSTALL="$HOME/.bun"
-export PATH="$BUN_INSTALL/bin:$PATH"
-
-# The following lines have been added by Docker Desktop to enable Docker CLI completions.
-fpath=(/Users/jlazarus/.docker/completions $fpath)
-autoload -Uz compinit
-compinit
-# End of Docker CLI completions
-#
-
+if [[ $IS_MAC ]]; then
+    alias stoptanium='sudo launchctl unload /Library/LaunchDaemons/com.tanium.taniumclient.plist'
+fi
 
 # =========================================
-# Prompt Configuration
+# Linux-specific Configuration
 # =========================================
+if [[ $IS_LINUX ]]; then
+    export WLR_NO_HARDWARE_CURSORS=1
+fi
 
-export WLR_NO_HARDWARE_CURSORS=1
+# =========================================
+# Ollama
+# =========================================
 export OLLAMA_FLASH_ATTENTION=1
 export OLLAMA_HOST=100.79.200.80
-export PATH="$HOME/.local/share/bob/nvim-bin:$HOME/.local/bin:$PATH"
-=======
->>>>>>> e35fc5afbbb1251e7d61e1065d6a4a0ad50a5021
+
+# =========================================
+# Prompt
+# =========================================
+PROMPT='[ %F{#9ece6a}%n%f :: %~ ] '
