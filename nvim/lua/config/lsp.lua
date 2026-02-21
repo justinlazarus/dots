@@ -11,14 +11,8 @@ vim.diagnostic.config {
 }
 
 -- Rounded borders on hover and signature help
-vim.api.nvim_create_autocmd('LspAttach', {
-  callback = function(args)
-    local buf = args.buf
-    vim.keymap.set('n', 'K', function()
-      vim.lsp.buf.hover { border = 'rounded' }
-    end, { buffer = buf })
-    vim.keymap.set({ 'n', 'i' }, '<C-s>', function()
-      vim.lsp.buf.signature_help { border = 'rounded' }
-    end, { buffer = buf })
-  end,
-})
+vim.lsp.handlers['textDocument/hover'] = vim.lsp.with(vim.lsp.handlers.hover, { border = 'rounded' })
+vim.lsp.handlers['textDocument/signatureHelp'] = vim.lsp.with(vim.lsp.handlers.signature_help, { border = 'rounded' })
+vim.keymap.set({ 'n', 'i' }, '<C-s>', function()
+  vim.lsp.buf.signature_help()
+end, { desc = 'Signature Help' })

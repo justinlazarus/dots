@@ -1,0 +1,15 @@
+// Place your key bindings in this file to override the defaults
+[
+    {
+        "key": "ctrl+cmd+k",
+        "command": "workbench.scm.focus"
+    },
+    {
+        "key": "ctrl+cmd+j",
+        "command": "workbench.panel.chat.view.copilot.focus"
+    },
+    {
+        "key": "ctrl+cmd+l",
+        "command": "workbench.files.action.focusFilesExplorer"
+    }
+]

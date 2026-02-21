@@ -1,12 +1,12 @@
 {
   "[markdown]": {
-    "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
+    "editor.defaultFormatter": "DavidAnson.vscode-markdownlint",
+    "editor.wordWrap": "wordWrapColumn",
+    "editor.wordWrapColumn": 110,
+    "editor.formatOnSave": true
   },
   "[csharp]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "csharpier.csharpier-vscode"
-  },
-  "[xml]": {
     "editor.defaultFormatter": "csharpier.csharpier-vscode"
   },
   "[javascript]": {
@@ -14,12 +14,12 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "[typescript]": {
-    "editor.formatOnSave": false,
+    "editor.formatOnSave": true,
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "dotnet.backgroundAnalysis.analyzerDiagnosticsScope": "fullSolution",
   "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": false,
-  "editor.fontFamily": "0xProto Nerd Font Mono",
+  "editor.fontFamily": "'0xProto'",
   "editor.fontLigatures": true,
   "editor.fontSize": 14,
   "editor.formatOnSave": true,
@@ -29,51 +29,129 @@
     110
   ],
   "editor.wordWrapColumn": 110,
-
-
-  "errorLens.enabledDiagnosticLevels": ["error", "warning", "info", "hint"],
+  "errorLens.enabledDiagnosticLevels": [
+    "error",
+    "warning",
+    "info",
+    "hint"
+  ],
   "git.autofetch": true,
   "git.confirmSync": false,
-  "mssql.enableQueryHistoryCapture": false,
   "problems.decorations.enabled": true,
-  "terminal.integrated.fontFamily": "Iosevka Nerd Font Mono",
-  "terminal.integrated.fontSize": 16,
+  "terminal.integrated.fontFamily": "'0xProto'",
+  "terminal.integrated.fontSize": 14,
+  // TypeScript Lsp Settings
   "typescript.preferences.includePackageJsonAutoImports": "on",
   "typescript.suggest.enabled": true,
-  "typescript.tsserver.experimental.enableProjectDiagnostics": true,
+  "typescript.tsserver.experimental.enableProjectDiagnostics": false,
   "typescript.updateImportsOnFileMove.enabled": "always",
   "typescript.validate.enable": true,
-  "workbench.colorTheme": "Tokyo Night Storm",
-  "workbench.iconTheme": "catppuccin-latte",
+  // VS Vim Settings
   "vim.leader": "<space>",
   "vim.textwidth": 110,
   "vim.useSystemClipboard": true,
   "vim.normalModeKeyBindingsNonRecursive": [
     {
-      "before": ["K"],
-      "commands": ["editor.action.showHover"]
+      "before": [
+        "K"
+      ],
+      "commands": [
+        "editor.action.showHover"
+      ]
     },
     {
-      "before": ["g", "r"],
-      "commands": ["editor.action.goToReferences"]
+      "before": [
+        "g",
+        "r"
+      ],
+      "commands": [
+        "editor.action.goToReferences"
+      ]
     },
     {
-      "before": ["g", "i"],
-      "commands": ["editor.action.goToImplementation"]
+      "before": [
+        "g",
+        "i"
+      ],
+      "commands": [
+        "editor.action.goToImplementation"
+      ]
     },
     {
-      "before": ["<leader>", "="],
-      "commands": ["editor.action.fontZoomIn"]
+      "before": [
+        "<leader>",
+        "="
+      ],
+      "commands": [
+        "editor.action.fontZoomIn"
+      ]
     },
     {
-      "before": ["<leader>", "-"],
-      "commands": ["editor.action.fontZoomOut"]
+      "before": [
+        "<leader>",
+        "-"
+      ],
+      "commands": [
+        "editor.action.fontZoomOut"
+      ]
+    },
+    {
+      "before": [
+        "<leader>",
+        "<leader>"
+      ],
+      "after": [],
+      "commands": [
+        {
+          "command": "workbench.action.showEditorsInActiveGroup",
+          "args": []
+        }
+      ]
+    },
+    {
+      "before": [
+        "<leader>",
+        "c"
+      ],
+      "after": [],
+      "commands": [
+        {
+          "command": "workbench.panel.chat.view.copilot.focus",
+          "args": []
+        }
+      ]
+    },
+    {
+      "before": [
+        "<leader>",
+        "f"
+      ],
+      "after": [],
+      "commands": [
+        {
+          "command": "workbench.explorer.fileView.focus",
+          "args": []
+        }
+      ]
+    },
+    {
+      "before": [
+        "<leader>",
+        "g"
+      ],
+      "after": [],
+      "commands": [
+        {
+          "command": "workbench.scm.focus",
+          "args": []
+        }
+      ]
     }
   ],
   "mssql.connectionGroups": [
     {
       "name": "ROOT",
-      "id": "9B3A16AF-4876-4F7F-AE30-9C82159BE6BF"
+      "id": "ROOT"
     }
   ],
   "mssql.connections": [
@@ -83,37 +161,34 @@
       "applicationName": "vscode-mssql",
       "applicationIntent": "ReadWrite",
       "server": "localhost,1433",
-      "user": "sa",
+      "database": "intl-depot-db",
+      "user": "SA",
       "password": "",
-      "columnEncryptionSetting": "Disabled",
-      "trustServerCertificate": true,
-      "groupId": "9B3A16AF-4876-4F7F-AE30-9C82159BE6BF",
-      "id": "7C52A669-BABD-4C81-A460-55DCB6934B3F",
-      "database": "depot-db",
       "commandTimeout": 30,
-      "encrypt": "Mandatory",
-      "profileSource": 0,
-      "savePassword": true,
-      "containerName": "db_performance_test_mssql",
-      "profileName": "depot-db"
+      "encrypt": "Optional",
+      "groupId": "ROOT",
+      "profileName": "local",
+      "trustServerCertificate": true,
+      "id": "92579917-3D45-4C9C-A356-A9F194DAF162",
+      "containerName": "silly_hellman",
+      "profileSource": 0
     },
     {
       "authenticationType": "SqlLogin",
       "connectTimeout": 30,
       "applicationName": "vscode-mssql",
       "applicationIntent": "ReadWrite",
-      "profileName": "old-db",
-      "server": "localhost,1433",
+      "server": "localhost",
+      "database": "intl-depot-db",
       "user": "sa",
       "password": "",
-      "savePassword": true,
-      "database": "intl-depot-db",
-      "trustServerCertificate": true,
-      "groupId": "9B3A16AF-4876-4F7F-AE30-9C82159BE6BF",
-      "id": "0727AAFB-0470-4D4D-A666-08685C0F1DDA",
       "commandTimeout": 30,
       "encrypt": "Mandatory",
-      "containerName": "intl-depot-db"
+      "profileName": "db",
+      "trustServerCertificate": true,
+      "groupId": "ROOT",
+      "id": "AD6944DB-3B6A-414C-BF43-00BEDEB8A2E5",
+      "profileSource": 0
     }
   ],
   "explorer.confirmDragAndDrop": false,
@@ -134,7 +209,7 @@
           "name": "INDEVEXC",
           "filterType": "simple",
           "library": "INDEVEXC",
-          "object": "QRPGLESRC",
+          "object": "Q*",
           "types": [
             "*SRCPF"
           ],
@@ -144,28 +219,17 @@
           "buttons": "SAVE"
         },
         {
-          "name": "Filter 2",
+          "name": "QGPL",
           "filterType": "simple",
-          "library": "QGPL",
-          "object": "INR504",
+          "library": "CODEVDB0",
+          "object": "*",
           "types": [
             "*SRCPF"
           ],
           "member": "*",
           "memberType": "*",
-          "protected": false
-        },
-        {
-          "name": "Filter 3",
-          "filterType": "simple",
-          "library": "QGPL",
-          "object": "*",
-          "types": [
-            "*SRCPF"
-          ],
-          "member": "INR504",
-          "memberType": "*",
-          "protected": false
+          "protected": false,
+          "buttons": "SAVE"
         }
       ],
       "libraryList": [
@@ -244,7 +308,7 @@
       "defaultDeploymentMethod": "",
       "protectedPaths": [],
       "showHiddenFiles": true,
-      "lastDownloadLocation": "/Users/jlazarus"
+      "lastDownloadLocation": "/Users/jlazarus/work/iseries/iseries-members/codevdb0/qsqdsrc"
     }
   ],
   "remote.autoForwardPortsSource": "hybrid",
@@ -277,12 +341,81 @@
   "github.copilot.chat.codeGeneration.useInstructionFiles": true,
   "terminal.integrated.defaultProfile.linux": "zsh (2)",
   "mssql.openQueryResultsInTabByDefaultDoNotShowPrompt": true,
-  "dev.containers.dockerSocketPath": "/Users/jlazarus/.lima/docker/sock/docker.sock",
+  "dev.containers.dockerSocketPath": "",
   "workbench.startupEditor": "none",
-  "workbench.colorCustomizations": {"editorRuler.foreground": "#FF9E64"},
+  "workbench.colorCustomizations": {
+    "editorRuler.foreground": "#FF9E64"
+  },
   "files.watcherExclude": {
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true,
     "**/node_modules/*/**": true
   },
+  "git.openRepositoryInParentFolders": "always",
+  "azureTerraform.survey": {
+    "surveyPromptDate": "2026-03-18T15:49:07.469Z",
+    "surveyPromptIgnoredCount": 5
+  },
+  "workbench.iconTheme": "material-icon-theme",
+  "git.blame.editorDecoration.enabled": false,
+  "githubPullRequests.queries": [
+    {
+      "label": "Copilot on My Behalf",
+      "query": "repo:${owner}/${repository} is:open author:copilot involves:${user}"
+    },
+    {
+      "label": "Local Pull Request Branches",
+      "query": "default"
+    },
+    {
+      "label": "Waiting For My Review",
+      "query": "repo:${owner}/${repository} is:open review-requested:${user}"
+    },
+    {
+      "label": "Created By Me",
+      "query": "repo:${owner}/${repository} is:open author:${user}"
+    },
+    {
+      "label": "All Open",
+      "query": "default"
+    },
+    {
+      "label": "Welcome to Costco, I love you",
+      "query": "repo:${owner}/${repository} is:open draft:no -label:test-automation sort:created-asc base:main"
+    }
+  ],
+  "diffEditor.renderSideBySide": false,
+  "github.copilot.nextEditSuggestions.enabled": true,
+  "terminal.integrated.fontLigatures.enabled": true,
+  "redhat.telemetry.enabled": false,
+  "workbench.editor.highlightModifiedTabs": true,
+  "github.copilot.enable": {
+    "COBOL": true,
+    "COBOLIT": true,
+    "ACUCOBOL": true,
+    "BITLANG-COBOL": true,
+    "RMCOBOL": true,
+    "ILECOBOL": true,
+    "COBOL_MF_LISTFILE": false,
+    "COBOL_PCOB_LISTFILE": false,
+    "COBOL_ACU_LISTFILE": false,
+    "COBOL_MF_PREP": false,
+    "mfu": false,
+    "utreport": false,
+    "*": true
+  },
+  "security.workspace.trust.untrustedFiles": "open",
+  "[dockerfile]": {
+    "editor.defaultFormatter": "ms-azuretools.vscode-containers"
+  },
+  "chat.tools.terminal.outputLocation": "chat",
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "diffEditor.ignoreTrimWhitespace": false,
+  "workbench.colorTheme": "Atom One Dark",
+  "chat.tools.terminal.autoApprove": {
+    "npx nx": true
+  },
+  "chat.viewSessions.orientation": "stacked"
 }

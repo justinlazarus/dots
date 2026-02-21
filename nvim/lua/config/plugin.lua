@@ -2,7 +2,6 @@ vim.pack.add {
   'https://github.com/nvim-treesitter/nvim-treesitter',
   'https://github.com/williamboman/mason.nvim',
   'https://github.com/folke/which-key.nvim',
-  'https://github.com/L3MON4D3/LuaSnip',
   'https://github.com/folke/lazydev.nvim',
   'https://github.com/saghen/blink.cmp',
   'https://github.com/seblyng/roslyn.nvim',
@@ -15,6 +14,7 @@ vim.pack.add {
   'https://github.com/mfussenegger/nvim-dap',
   'https://github.com/rcarriga/nvim-dap-ui',
   'https://github.com/nvim-neotest/nvim-nio',
+  'https://github.com/nvim-treesitter/nvim-treesitter-context',
 }
 
 --------------------------------------------------------------------------------------------------- treesitter
@@ -31,7 +31,6 @@ if ok then
       'json',
       'lua',
       'markdown',
-      'powershell',
       'tsx',
       'typescript',
       'vim',
@@ -44,9 +43,9 @@ if ok then
 
     highlight = {
       enable = true,
-      disable = function(lang, buf)
+      disable = function(_, buf)
         local max_filesize = 100 * 1024 -- 100 KB
-        local ok_stat, stats = pcall(vim.loop.fs_stat, vim.api.nvim_buf_get_name(buf))
+        local ok_stat, stats = pcall(vim.uv.fs_stat, vim.api.nvim_buf_get_name(buf))
         if ok_stat and stats and stats.size > max_filesize then
           return true
         end
@@ -135,6 +134,10 @@ require('blink.cmp').setup {
     implementation = 'lua',
   },
 }
+
+---------------------------------------------------------------------------------------------- treesitter-context
+
+require('treesitter-context').setup { enable = true, multiline_threshold = 4 }
 
 ------------------------------------------------------------------------------------------------------ conform
 

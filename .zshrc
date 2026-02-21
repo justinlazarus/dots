@@ -119,12 +119,33 @@ fi
 
 alias ff="fzf --style full --preview 'fzf-preview.sh {}'"
 alias ..='cd ..'
-alias code="code-insiders"
-alias chobster-dash='~/chobster/venv/bin/python ~/chobster/dashboard.py'
 
 if [[ $IS_MAC ]]; then
     alias stoptanium='sudo launchctl unload /Library/LaunchDaemons/com.tanium.taniumclient.plist'
 fi
+alias chobster-dash='~/chobster/venv/bin/python ~/chobster/dashboard.py'
+
+# =========================================
+# Prompt Configuration
+# =========================================
+PROMPT='[ %F{#9ece6a}%n%f :: %~ ] '
+
+# Load Angular CLI autocompletion.
+source <(ng completion script)
+# opencode
+export PATH=/Users/jlazarus/.opencode/bin:$PATH
+
+# bun completions
+[ -s "/Users/jlazarus/.bun/_bun" ] && source "/Users/jlazarus/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+# The following lines have been added by Docker Desktop to enable Docker CLI completions.
+fpath=(/Users/jlazarus/.docker/completions $fpath)
+autoload -Uz compinit
+compinit
 
 # =========================================
 # Linux-specific Configuration
@@ -143,3 +164,4 @@ export OLLAMA_HOST=100.79.200.80
 # Prompt
 # =========================================
 PROMPT='[ %F{#9ece6a}%n%f :: %~ ] '
+export PATH="$HOME/.local/share/bob/nvim-bin:$HOME/.local/bin:$PATH"
