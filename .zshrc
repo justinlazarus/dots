@@ -165,3 +165,6 @@ export OLLAMA_HOST=100.79.200.80
 # =========================================
 PROMPT='[ %F{#9ece6a}%n%f :: %~ ] '
 export PATH="$HOME/.local/share/bob/nvim-bin:$HOME/.local/bin:$PATH"
+
+# Fix stale code-insiders alias (VS Code regular, not Insiders)
+unalias code 2>/dev/null
