@@ -52,6 +52,20 @@ export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
 # =========================================
+# SSL/TLS Certificates
+# =========================================
+if [[ $IS_MAC ]]; then
+    mkdir -p ~/.certs
+    security find-certificate -a -p \
+        /System/Library/Keychains/SystemRootCertificates.keychain \
+        /Library/Keychains/System.keychain \
+        > ~/.certs/ca-bundle.crt 2>/dev/null
+    export SSL_CERT_FILE="$HOME/.certs/ca-bundle.crt"
+    export REQUESTS_CA_BUNDLE="$SSL_CERT_FILE"
+    export NODE_EXTRA_CA_CERTS="$SSL_CERT_FILE"
+fi
+
+# =========================================
 # Environment Variables
 # =========================================
 unset CI

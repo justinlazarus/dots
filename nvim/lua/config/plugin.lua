@@ -91,9 +91,9 @@ vim.schedule(function()
   ensure_installed 'sqlfmt' -- SQL formatter
   ensure_installed 'stylua' -- Lua formatter
   ensure_installed 'yamlfmt' -- YAML formatter
-  ensure_installed 'terraform-ls' -- Terraform
-  ensure_installed 'rust-analyzer' -- Rust
-  ensure_installed 'gopls' -- Go
+  if vim.fn.executable 'terraform' == 1 then ensure_installed 'terraform-ls' end
+  if vim.fn.executable 'rustc' == 1 then ensure_installed 'rust-analyzer' end
+  if vim.fn.executable 'go' == 1 then ensure_installed 'gopls' end
   ensure_installed 'netcoredbg' -- C# debugger
 end)
 
