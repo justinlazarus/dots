@@ -12,6 +12,13 @@ case "$(uname -s)" in
 esac
 
 # =========================================
+# Linux-specific Configuration
+# =========================================
+if [[ $IS_LINUX ]]; then
+    export WLR_NO_HARDWARE_CURSORS=1
+fi
+
+# =========================================
 # History Configuration
 # =========================================
 HISTSIZE=10000
@@ -73,6 +80,8 @@ export EDITOR=nvim
 export COLORTERM=truecolor
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
+export OLLAMA_FLASH_ATTENTION=1
+export OLLAMA_HOST=100.79.200.80
 
 # =========================================
 # Node.js (NVM) - Lazy Loaded
@@ -91,19 +100,6 @@ nvm() {
 }
 
 # =========================================
-# .NET Development Environment Variables
-# =========================================
-# TODO: Move these to a .env file or secrets manager
-export CWIMS_ADMIN_PASSWORD="Costco123@"
-export Database__DepotDbConnectionString="Server=localhost,1433;Database=depot-db;User Id=sa;Password=Costco12345@;TrustServerCertificate=true;Encrypt=false;"
-export Database__ReadOnlyDepotDbConnectionString="Server=localhost,1433;Database=depot-db;User Id=sa;Password=Costco12345@;TrustServerCertificate=true;Encrypt=false;"
-export DOTNET_ConnectionStrings__Database="${DOTNET_ConnectionStrings__Database:-Data Source=localhost,1433;Database=intl-depot-db;Integrated Security=false;User ID=SA;Password=Intl@depot1;TrustServerCertificate=True;}"
-export DOTNET_MessagingOptions__Namespace="${DOTNET_MessagingOptions__Namespace:-amqp://guest:guest@localhost:5672/}"
-export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317"
-export OTEL_SERVICE_NAME="Depot"
-export ASPNETCORE_ENVIRONMENT=Development
-
-# =========================================
 # Angular Development Environment Variables
 # =========================================
 export KARMA_LOG_LEVEL="ERROR"
@@ -117,6 +113,8 @@ if command -v fzf >/dev/null 2>&1; then
 fi
 
 [ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
+
+command -v ng >/dev/null 2>&1 && source <(ng completion script)
 
 # =========================================
 # Aliases
@@ -139,46 +137,15 @@ if [[ $IS_MAC ]]; then
 fi
 alias chobster-dash='~/chobster/venv/bin/python ~/chobster/dashboard.py'
 
+# Fix stale code-insiders alias (VS Code regular, not Insiders)
+unalias code 2>/dev/null
+
 # =========================================
 # Prompt Configuration
 # =========================================
 PROMPT='[ %F{#9ece6a}%n%f :: %~ ] '
 
-# Load Angular CLI autocompletion.
-source <(ng completion script)
-# opencode
-export PATH=/Users/jlazarus/.opencode/bin:$PATH
-
-# bun completions
-[ -s "/Users/jlazarus/.bun/_bun" ] && source "/Users/jlazarus/.bun/_bun"
-
-# bun
-export BUN_INSTALL="$HOME/.bun"
-export PATH="$BUN_INSTALL/bin:$PATH"
-
-# The following lines have been added by Docker Desktop to enable Docker CLI completions.
-fpath=(/Users/jlazarus/.docker/completions $fpath)
-autoload -Uz compinit
-compinit
-
 # =========================================
-# Linux-specific Configuration
+# Local overrides (machine-specific secrets, etc.)
 # =========================================
-if [[ $IS_LINUX ]]; then
-    export WLR_NO_HARDWARE_CURSORS=1
-fi
-
-# =========================================
-# Ollama
-# =========================================
-export OLLAMA_FLASH_ATTENTION=1
-export OLLAMA_HOST=100.79.200.80
-
-# =========================================
-# Prompt
-# =========================================
-PROMPT='[ %F{#9ece6a}%n%f :: %~ ] '
-export PATH="$HOME/.local/share/bob/nvim-bin:$HOME/.local/bin:$PATH"
-
-# Fix stale code-insiders alias (VS Code regular, not Insiders)
-unalias code 2>/dev/null
+[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local

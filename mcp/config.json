@@ -2,7 +2,7 @@
   "mcpServers": {
     "ibmi-mcp-server": {
       "command": "node",
-      "args": ["/Users/jlazarus/work/ibmi-mcp-server/build/index.js"],
+      "args": ["./ibmi-mcp-server/build/index.js"],
       "env": {
         "NODE_ENV": "production"
       }
