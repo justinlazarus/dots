@@ -1,0 +1,12 @@
+# Machine-specific secrets and overrides
+# Copy to ~/.zshrc.local and fill in values
+
+# .NET Development
+export CWIMS_ADMIN_PASSWORD=""
+export Database__DepotDbConnectionString=""
+export Database__ReadOnlyDepotDbConnectionString=""
+export DOTNET_ConnectionStrings__Database=""
+export DOTNET_MessagingOptions__Namespace=""
+export OTEL_EXPORTER_OTLP_ENDPOINT=""
+export OTEL_SERVICE_NAME=""
+export ASPNETCORE_ENVIRONMENT=""
