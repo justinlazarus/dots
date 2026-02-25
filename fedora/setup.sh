@@ -61,7 +61,8 @@ MOZ_ENABLE_WAYLAND=1
 QT_QPA_PLATFORM=wayland
 _JAVA_AWT_WM_NONREPARENTING=1
 XDG_CURRENT_DESKTOP=sway
-XDG_SESSION_TYPE=wayland${extra}
+XDG_SESSION_TYPE=wayland
+ELECTRON_OZONE_PLATFORM_HINT=auto${extra}
 EOF
 }
 
@@ -172,13 +173,13 @@ setup_vscode_wayland() {
   mkdir -p "$HOME/.vscode"
   if [ -f "$argv" ]; then
     if ! grep -q 'ozone-platform' "$argv"; then
-      sed -i '$ s/}/,\n\t"enable-features": "UseOzonePlatform,WaylandWindowDecorations",\n\t"ozone-platform": "wayland"\n}/' "$argv"
+      sed -i '$ s/}/,\n\t"enable-features": "UseOzonePlatform",\n\t"ozone-platform": "wayland"\n}/' "$argv"
     fi
   else
     cat > "$argv" <<VSCEOF
 {
 	"enable-crash-reporter": true,
-	"enable-features": "UseOzonePlatform,WaylandWindowDecorations",
+	"enable-features": "UseOzonePlatform",
 	"ozone-platform": "wayland"
 }
 VSCEOF

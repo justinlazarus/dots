@@ -67,6 +67,6 @@
         "format-ethernet": "󰈀",
         "format-linked": "",
         "tooltip-format-wifi": "{essid} ({signalStrength}%)",
-        "on-click": "nm-connection-editor"
+        "on-click": "ghostty -e nmtui-connect"
     }
 }
