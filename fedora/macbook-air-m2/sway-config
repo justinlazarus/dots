@@ -275,7 +275,7 @@ seat seat0 xcursor_theme Bibata-Modern-Classic 24
 
 # Autostart
 exec waybar
-exec sworkstyle
+exec ~/.cargo/bin/sworkstyle
 
 # Default workspace layout
 exec swaymsg "workspace number 1; exec ghostty --class=com.mitchellh.ghostty.ssh"
