@@ -86,7 +86,7 @@ setup_ghostty() {
 setup_sway_configs() {
   local COMMON="$DOTS/fedora/common"
 
-  echo "🪟 Symlinking shared configs (rofi, dunst, swaylock)..."
+  echo "🪟 Symlinking shared configs (rofi, dunst, swaylock, portals)..."
   mkdir -p ~/.config/rofi
   ln -sf "$COMMON/rofi/config.rasi" ~/.config/rofi/config.rasi
   ln -sf "$COMMON/rofi/tokyonight.rasi" ~/.config/rofi/tokyonight.rasi
@@ -94,6 +94,8 @@ setup_sway_configs() {
   ln -sf "$COMMON/dunst/dunstrc" ~/.config/dunst/dunstrc
   mkdir -p ~/.config/swaylock
   ln -sf "$COMMON/swaylock/config" ~/.config/swaylock/config
+  mkdir -p ~/.config/xdg-desktop-portal
+  ln -sf "$COMMON/xdg-desktop-portal/sway-portals.conf" ~/.config/xdg-desktop-portal/sway-portals.conf
 
   echo "🪟 Symlinking device configs (sway, waybar)..."
   mkdir -p ~/.config/sway
