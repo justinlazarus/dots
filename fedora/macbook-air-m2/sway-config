@@ -275,10 +275,10 @@ seat seat0 xcursor_theme Bibata-Modern-Classic 24
 
 # Autostart
 exec waybar
-exec sworkstyle &>/dev/null
+exec sworkstyle
 
 # Default workspace layout
-exec swaymsg "workspace number 1; exec ghostty --class=ghostty-ssh"
+exec swaymsg "workspace number 1; exec ghostty --class=com.mitchellh.ghostty.ssh"
 exec swaymsg "workspace number 2; exec ghostty"
 exec swaymsg "workspace number 3; exec firefox"
 exec swaymsg "workspace number 4; exec code"

@@ -136,7 +136,7 @@ if [[ $IS_MAC ]]; then
     alias stoptanium='sudo launchctl unload /Library/LaunchDaemons/com.tanium.taniumclient.plist'
 fi
 alias chobster-dash='~/chobster/venv/bin/python ~/chobster/dashboard.py'
-alias sshghostty='ghostty --class=ghostty-ssh'
+alias sshghostty='ghostty --class=com.mitchellh.ghostty.ssh'
 
 # Fix stale code-insiders alias (VS Code regular, not Insiders)
 unalias code 2>/dev/null

@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Ghostty SSH
 Comment=Ghostty terminal for SSH sessions
-Exec=ghostty --class=ghostty-ssh
+Exec=ghostty --class=com.mitchellh.ghostty.ssh
 Icon=com.mitchellh.ghostty
 Terminal=false
 Type=Application

@@ -1,5 +1,5 @@
 [matching]
-"ghostty-ssh" = "󰣀"
+"com.mitchellh.ghostty.ssh" = "󰣀"
 "com.mitchellh.ghostty" = ""
 "org.mozilla.firefox" = ""
 "code" = "󰨞"
