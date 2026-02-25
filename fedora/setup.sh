@@ -28,9 +28,9 @@ pick_device() {
   echo ""
   read -rp "Select device [1-3]: " choice
   case "$choice" in
-    1) DEVICE="a1502"   ; CONF_DIR="$DOTS/fed"     ;;
-    2) DEVICE="asahi"   ; CONF_DIR="$DOTS/fedasahi" ;;
-    3) DEVICE="desktop" ; CONF_DIR="$DOTS/feddesk"  ;;
+    1) DEVICE="a1502"   ; CONF_DIR="$DOTS/fedora/macbook-pro-2015" ;;
+    2) DEVICE="asahi"   ; CONF_DIR="$DOTS/fedora/macbook-air-m2"  ;;
+    3) DEVICE="desktop" ; CONF_DIR="$DOTS/fedora/desktop-9900k"   ;;
     *) echo "Invalid selection."; exit 1 ;;
   esac
   echo ""
@@ -83,19 +83,23 @@ setup_ghostty() {
 }
 
 setup_sway_configs() {
-  echo "🪟 Symlinking sway, waybar, rofi, dunst, swaylock configs..."
+  local COMMON="$DOTS/fedora/common"
+
+  echo "🪟 Symlinking shared configs (rofi, dunst, swaylock)..."
+  mkdir -p ~/.config/rofi
+  ln -sf "$COMMON/rofi/config.rasi" ~/.config/rofi/config.rasi
+  ln -sf "$COMMON/rofi/tokyonight.rasi" ~/.config/rofi/tokyonight.rasi
+  mkdir -p ~/.config/dunst
+  ln -sf "$COMMON/dunst/dunstrc" ~/.config/dunst/dunstrc
+  mkdir -p ~/.config/swaylock
+  ln -sf "$COMMON/swaylock/config" ~/.config/swaylock/config
+
+  echo "🪟 Symlinking device configs (sway, waybar)..."
   mkdir -p ~/.config/sway
   ln -sf "$CONF_DIR/sway-config" ~/.config/sway/config
   mkdir -p ~/.config/waybar
   ln -sf "$CONF_DIR/waybar/config.jsonc" ~/.config/waybar/config.jsonc
   ln -sf "$CONF_DIR/waybar/style.css" ~/.config/waybar/style.css
-  mkdir -p ~/.config/rofi
-  ln -sf "$CONF_DIR/rofi/config.rasi" ~/.config/rofi/config.rasi
-  ln -sf "$CONF_DIR/rofi/tokyonight.rasi" ~/.config/rofi/tokyonight.rasi
-  mkdir -p ~/.config/dunst
-  ln -sf "$CONF_DIR/dunst/dunstrc" ~/.config/dunst/dunstrc
-  mkdir -p ~/.config/swaylock
-  ln -sf "$CONF_DIR/swaylock/config" ~/.config/swaylock/config
 }
 
 setup_dotfiles() {
