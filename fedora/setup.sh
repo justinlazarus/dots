@@ -115,6 +115,10 @@ setup_dotfiles() {
   mkdir -p ~/.config/Code/User
   ln -sf "$DOTS/vscode/settings.json" ~/.config/Code/User/settings.json
   ln -sf "$DOTS/vscode/keybindings.json" ~/.config/Code/User/keybindings.json
+  mkdir -p ~/.config/sworkstyle
+  ln -sf "$DOTS/sworkstyle/config.toml" ~/.config/sworkstyle/config.toml
+  mkdir -p ~/.local/share/applications
+  ln -sf "$DOTS/applications/ghostty-ssh.desktop" ~/.local/share/applications/ghostty-ssh.desktop
 }
 
 setup_gitmux() {

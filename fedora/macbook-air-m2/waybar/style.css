@@ -12,7 +12,7 @@
 
 * {
     font-family: "0xProto Nerd Font", monospace;
-    font-size: 13px;
+    font-size: 15px;
     min-height: 0;
 }
 
@@ -46,11 +46,11 @@ window#waybar {
 }
 
 #clock {
-    color: @fg;
+    color: @gray;
 }
 
 #battery {
-    color: @green;
+    color: @gray;
 }
 
 #battery.warning {
@@ -62,11 +62,11 @@ window#waybar {
 }
 
 #battery.charging {
-    color: @green;
+    color: @gray;
 }
 
 #network {
-    color: @cyan;
+    color: @gray;
 }
 
 #network.disconnected {
@@ -74,35 +74,17 @@ window#waybar {
 }
 
 #pulseaudio {
-    color: @purple;
+    color: @gray;
 }
 
 #pulseaudio.muted {
     color: @gray;
 }
 
-#backlight {
-    color: @yellow;
-}
-
-#tray {
-    color: @fg;
-}
-
-#tray > .passive {
-    -gtk-icon-effect: dim;
-}
-
-#tray > .needs-attention {
-    -gtk-icon-effect: highlight;
-}
-
 /* Right-side module spacing */
-#pulseaudio,
-#backlight,
-#battery,
 #network,
-#clock,
-#tray {
+#pulseaudio,
+#battery,
+#clock {
     padding: 0 10px;
 }

@@ -417,5 +417,6 @@
   "chat.tools.terminal.autoApprove": {
     "npx nx": true
   },
-  "chat.viewSessions.orientation": "stacked"
+  "chat.viewSessions.orientation": "stacked",
+  "claudeCode.preferredLocation": "panel"
 }
