@@ -45,6 +45,14 @@ window#waybar {
     font-weight: bold;
 }
 
+#cpu {
+    color: @gray;
+}
+
+#memory {
+    color: @gray;
+}
+
 #clock {
     color: @gray;
 }
@@ -82,6 +90,8 @@ window#waybar {
 }
 
 /* Right-side module spacing */
+#cpu,
+#memory,
 #network,
 #pulseaudio,
 #battery,

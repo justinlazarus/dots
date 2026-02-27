@@ -9,6 +9,8 @@
     ],
     "modules-center": [],
     "modules-right": [
+        "cpu",
+        "memory",
         "clock",
         "pulseaudio",
         "battery",
@@ -20,6 +22,14 @@
     },
     "sway/mode": {
         "format": "{}"
+    },
+    "cpu": {
+        "format": "󰍛 {usage}%",
+        "interval": 5
+    },
+    "memory": {
+        "format": "󰘚 {percentage}%",
+        "interval": 5
     },
     "clock": {
         "format": "{:%m/%d  %H:%M}",
