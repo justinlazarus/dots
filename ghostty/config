@@ -5,7 +5,15 @@ clipboard-paste-protection = false
 clipboard-write = allow
 app-notifications = no-clipboard-copy
 term = xterm-256color
-macos-titlebar-style = hidden
+bell-features = border
+mouse-hide-while-typing = true
+confirm-close-surface = true
+shell-integration = zsh
+window-padding-x = 4
+window-padding-y = 4
+background-opacity = 0.9
+background-blur-radius = 20
+macos-titlebar-style = native
 
 # Tokyo Night Storm theme
 background = #24283b
