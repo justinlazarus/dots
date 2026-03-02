@@ -9,11 +9,12 @@
     ],
     "modules-center": [],
     "modules-right": [
-        "pulseaudio",
-        "backlight",
-        "battery",
+        "cpu",
+        "memory",
         "clock",
-        "tray"
+        "pulseaudio",
+        "battery",
+        "network"
     ],
     "sway/workspaces": {
         "disable-scroll": true,
@@ -22,8 +23,16 @@
     "sway/mode": {
         "format": "{}"
     },
+    "cpu": {
+        "format": "󰍛 {usage}%",
+        "interval": 5
+    },
+    "memory": {
+        "format": "󰘚 {percentage}%",
+        "interval": 5
+    },
     "clock": {
-        "format": "󰥔  {:%a %b %d  %H:%M}",
+        "format": "{:%m/%d  %H:%M}",
         "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
     },
     "battery": {
@@ -31,9 +40,9 @@
             "warning": 30,
             "critical": 15
         },
-        "format": "{icon}  {capacity}%",
-        "format-charging": "󰂄  {capacity}%",
-        "format-plugged": "󰚥  {capacity}%",
+        "format": "{icon}",
+        "format-charging": "󰂄",
+        "format-plugged": "󰚥",
         "format-icons": [
             "󰂎",
             "󰁺",
@@ -49,7 +58,7 @@
         ]
     },
     "pulseaudio": {
-        "format": "{icon}  {volume}%",
+        "format": "{icon}",
         "format-muted": "󰝟  muted",
         "format-icons": {
             "default": [
@@ -62,15 +71,12 @@
         "on-scroll-up": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+",
         "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
     },
-    "backlight": {
-        "format": "{icon}  {percent}%",
-        "format-icons": [
-            "󰃞",
-            "󰃟",
-            "󰃠"
-        ]
-    },
-    "tray": {
-        "spacing": 8
+    "network": {
+        "format-wifi": "󰖩",
+        "format-disconnected": "󱚼",
+        "format-ethernet": "󰈀",
+        "format-linked": "",
+        "tooltip-format-wifi": "{essid} ({signalStrength}%)",
+        "on-click": "ghostty -e nmtui-connect"
     }
 }

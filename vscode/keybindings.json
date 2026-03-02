@@ -1,15 +1,35 @@
 // Place your key bindings in this file to override the defaults
 [
+    // macOS
     {
         "key": "ctrl+cmd+k",
-        "command": "workbench.scm.focus"
+        "command": "workbench.scm.focus",
+        "when": "isMac"
     },
     {
         "key": "ctrl+cmd+j",
-        "command": "workbench.panel.chat.view.copilot.focus"
+        "command": "workbench.panel.chat.view.copilot.focus",
+        "when": "isMac"
     },
     {
         "key": "ctrl+cmd+l",
-        "command": "workbench.files.action.focusFilesExplorer"
+        "command": "workbench.files.action.focusFilesExplorer",
+        "when": "isMac"
+    },
+    // Linux
+    {
+        "key": "ctrl+alt+k",
+        "command": "workbench.scm.focus",
+        "when": "isLinux"
+    },
+    {
+        "key": "ctrl+alt+j",
+        "command": "workbench.panel.chat.view.copilot.focus",
+        "when": "isLinux"
+    },
+    {
+        "key": "ctrl+alt+l",
+        "command": "workbench.files.action.focusFilesExplorer",
+        "when": "isLinux"
     }
 ]

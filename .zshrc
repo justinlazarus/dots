@@ -70,6 +70,21 @@ if [[ $IS_MAC ]]; then
     export SSL_CERT_FILE="$HOME/.certs/ca-bundle.crt"
     export REQUESTS_CA_BUNDLE="$SSL_CERT_FILE"
     export NODE_EXTRA_CA_CERTS="$SSL_CERT_FILE"
+
+    # Background sync: update macOS System keychain with corporate CA certs
+    # Start the helper without printing job control lines. Prefer zsh's &!
+    # which starts and immediately disowns the job; fall back to setsid if
+    # &! is not supported in the current shell.
+    if [[ -x "$HOME/dots/utils/update-keychain.sh" ]]; then
+        if [[ -o interactive && ${ZSH_VERSION-} ]]; then
+            # zsh: use &! to avoid the "[3] 21102" job line
+            "$HOME/dots/utils/update-keychain.sh" >/dev/null 2>&1 &!
+        elif command -v setsid >/dev/null 2>&1; then
+            setsid "$HOME/dots/utils/update-keychain.sh" >/dev/null 2>&1 &
+        else
+            nohup "$HOME/dots/utils/update-keychain.sh" >/dev/null 2>&1 & disown
+        fi
+    fi
 fi
 
 # =========================================
@@ -136,6 +151,7 @@ if [[ $IS_MAC ]]; then
     alias stoptanium='sudo launchctl unload /Library/LaunchDaemons/com.tanium.taniumclient.plist'
 fi
 alias chobster-dash='~/chobster/venv/bin/python ~/chobster/dashboard.py'
+alias sshghostty='ghostty --class=com.mitchellh.ghostty.ssh'
 
 # Fix stale code-insiders alias (VS Code regular, not Insiders)
 unalias code 2>/dev/null
