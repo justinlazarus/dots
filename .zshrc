@@ -67,6 +67,23 @@ if [[ $IS_MAC ]]; then
         /System/Library/Keychains/SystemRootCertificates.keychain \
         /Library/Keychains/System.keychain \
         > ~/.certs/ca-bundle.crt 2>/dev/null
+    
+    # Append Costco proxy certificate chains in proper order for Go TLS validation
+    # Cached to avoid slow network calls on every shell startup
+    CHAIN_CACHE="$HOME/.certs/costco-proxy-chain.pem"
+    if [[ ! -f "$CHAIN_CACHE" ]] || [[ $(find "$CHAIN_CACHE" -mtime +1 2>/dev/null) ]]; then
+        # Cache is missing or older than 1 day, try to refresh from network
+        for host in nodejs.org github.com npmjs.com; do
+            if timeout 2 bash -c "</dev/tcp/$host/443" 2>/dev/null; then
+                openssl s_client -connect $host:443 -showcerts </dev/null 2>&1 | \
+                    sed -n '/BEGIN CERTIFICATE/,/END CERTIFICATE/p' > "$CHAIN_CACHE" 2>/dev/null && break
+            fi
+        done
+    fi
+    # Append cached chain if it exists
+    # To manually refresh: rm ~/.certs/costco-proxy-chain.pem && source ~/.zshrc
+    [[ -f "$CHAIN_CACHE" ]] && cat "$CHAIN_CACHE" >> ~/.certs/ca-bundle.crt 2>/dev/null
+    
     export SSL_CERT_FILE="$HOME/.certs/ca-bundle.crt"
     export REQUESTS_CA_BUNDLE="$SSL_CERT_FILE"
     export NODE_EXTRA_CA_CERTS="$SSL_CERT_FILE"

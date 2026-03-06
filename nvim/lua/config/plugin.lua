@@ -5,6 +5,7 @@ vim.pack.add {
   'https://github.com/folke/lazydev.nvim',
   'https://github.com/saghen/blink.cmp',
   'https://github.com/seblyng/roslyn.nvim',
+  'https://github.com/j-hui/fidget.nvim',
   'https://github.com/folke/tokyonight.nvim',
   'https://github.com/stevearc/conform.nvim',
   'https://github.com/lewis6991/gitsigns.nvim',
@@ -224,6 +225,29 @@ require('mini.statusline').setup {
   },
   use_icons = true,
 }
+
+-- LSP progress UI (must be set up BEFORE roslyn)
+local ok_fidget, fidget = pcall(require, 'fidget')
+if ok_fidget then
+  fidget.setup {
+    progress = {
+      display = {
+        render_limit = 16,
+        done_ttl = 3,
+        progress_ttl = math.huge,
+      },
+    },
+    notification = {
+      window = {
+        normal_hl = 'Comment',
+        winblend = 0,
+        border = 'none',
+        zindex = 45,
+        relative = 'editor',
+      },
+    },
+  }
+end
 
 ------------------------------------------------------------------------------------------------------- roslyn
 

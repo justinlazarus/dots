@@ -10,7 +10,7 @@ set -euo pipefail
 # SHA256 fingerprint. It uses a single macOS GUI auth prompt (osascript) to
 # perform the installs so you won't be prompted repeatedly.
 
-DEFAULT_HOSTS=(github.com raw.githubusercontent.com ghcr.io registry.npmjs.org registry.yarnpkg.com nodejs.org npmjs.com)
+DEFAULT_HOSTS=(github.com raw.githubusercontent.com ghcr.io registry.npmjs.org registry.yarnpkg.com nodejs.org npmjs.com models.dev)
 OUTDIR_DEFAULT="$HOME/theoven/.devcontainer/cacerts"
 CORP_PATTERN="${CORP_PATTERN:-Costco}"
 

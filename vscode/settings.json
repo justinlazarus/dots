@@ -161,34 +161,17 @@
       "applicationName": "vscode-mssql",
       "applicationIntent": "ReadWrite",
       "server": "localhost,1433",
-      "database": "intl-depot-db",
-      "user": "SA",
-      "password": "",
-      "commandTimeout": 30,
-      "encrypt": "Optional",
-      "groupId": "ROOT",
-      "profileName": "local",
-      "trustServerCertificate": true,
-      "id": "92579917-3D45-4C9C-A356-A9F194DAF162",
-      "containerName": "silly_hellman",
-      "profileSource": 0
-    },
-    {
-      "authenticationType": "SqlLogin",
-      "connectTimeout": 30,
-      "applicationName": "vscode-mssql",
-      "applicationIntent": "ReadWrite",
-      "server": "localhost",
-      "database": "intl-depot-db",
+      "database": "depot",
       "user": "sa",
       "password": "",
       "commandTimeout": 30,
       "encrypt": "Mandatory",
-      "profileName": "db",
-      "trustServerCertificate": true,
       "groupId": "ROOT",
-      "id": "AD6944DB-3B6A-414C-BF43-00BEDEB8A2E5",
-      "profileSource": 0
+      "profileName": "testdb",
+      "savePassword": true,
+      "trustServerCertificate": true,
+      "id": "BE627C20-A7B4-4BB7-8543-203EED7EFB4B",
+      "containerName": "depot-test-db"
     }
   ],
   "explorer.confirmDragAndDrop": false,
@@ -418,5 +401,7 @@
     "npx nx": true
   },
   "chat.viewSessions.orientation": "stacked",
-  "claudeCode.preferredLocation": "panel"
+  "chat.mcp.gallery.enabled": true,
+  "docker.extension.enableComposeLanguageServer": false,
+  "githubPullRequests.pullBranch": "never"
 }
