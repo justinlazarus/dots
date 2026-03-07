@@ -8,7 +8,7 @@ _G.Snacks = require 'snacks'
 Snacks.setup {
   picker = {
     enabled = true,
-    ui_select = true,
+    ui_select = false,
     win = {
       input = {
         keys = {
@@ -201,6 +201,9 @@ end, { desc = 'Colorschemes' })
 map('n', '<leader>ox', function()
   require('config.dotnet').nx_picker()
 end, { desc = 'NX: pick target' })
+
+-- Code actions: use native vim.lsp.buf.code_action instead of snacks picker
+map({ 'n', 'v' }, 'gra', vim.lsp.buf.code_action, { desc = 'Code Action' })
 
 -- LSP pickers
 map('n', 'gd', function()
