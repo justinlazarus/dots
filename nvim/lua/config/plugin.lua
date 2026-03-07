@@ -15,6 +15,7 @@ vim.pack.add {
   'https://github.com/rcarriga/nvim-dap-ui',
   'https://github.com/nvim-neotest/nvim-nio',
   'https://github.com/nvim-treesitter/nvim-treesitter-context',
+  'https://github.com/nvim-treesitter/nvim-treesitter-textobjects',
 }
 
 --------------------------------------------------------------------------------------------------- treesitter
@@ -35,6 +36,7 @@ if ok then
       'typescript',
       'vim',
       'vimdoc',
+      'angular',
       'xml',
       'yaml',
     },
@@ -87,6 +89,8 @@ vim.schedule(function()
   ensure_installed 'yaml-language-server' -- yamlls
   ensure_installed 'roslyn' -- C#/.NET (via third-party registry)
   ensure_installed 'angular-language-server' -- angular
+  ensure_installed 'eslint-lsp' -- eslint
+  ensure_installed 'prettier' -- TS/JS/HTML formatter
   ensure_installed 'csharpier' -- C# formatter
   ensure_installed 'sqlfmt' -- SQL formatter
   ensure_installed 'stylua' -- Lua formatter
@@ -139,6 +143,16 @@ require('blink.cmp').setup {
 
 require('treesitter-context').setup { enable = true, multiline_threshold = 4 }
 
+--------------------------------------------------------------------------------------- treesitter-textobjects
+
+require('nvim-treesitter-textobjects').setup { select = { lookahead = true } }
+
+local select_textobject = require('nvim-treesitter-textobjects.select').select_textobject
+for _, mode in ipairs { 'x', 'o' } do
+  vim.keymap.set(mode, 'am', function() select_textobject('@function.outer') end, { desc = 'Around method/function' })
+  vim.keymap.set(mode, 'im', function() select_textobject('@function.inner') end, { desc = 'Inside method/function' })
+end
+
 ------------------------------------------------------------------------------------------------------ conform
 
 require('conform').setup {
@@ -161,6 +175,10 @@ require('conform').setup {
     lua = { 'stylua' },
     cs = { 'csharpier' },
     yaml = { 'yamlfmt' },
+    typescript = { 'prettier' },
+    javascript = { 'prettier' },
+    html = { 'prettier' },
+    htmlangular = { 'prettier' },
   },
   formatters = {
     csharpier = {
@@ -227,7 +245,7 @@ require('mini.statusline').setup {
 
 ------------------------------------------------------------------------------------------------------- roslyn
 
-require('roslyn').setup {}
+require('roslyn').setup { fast_init = true }
 
 -------------------------------------------------------------------------------------------------- tokyonight
 

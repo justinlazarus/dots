@@ -2,6 +2,25 @@ local map = vim.keymap.set
 
 -- ── General ──────────────────────────────────────────────────────────
 map('n', '<Esc>', '<cmd>nohlsearch<CR>')
+map('x', '/', '<Esc>/\\%V', { desc = 'Search in selection' })
+map('x', '<leader>/', function()
+  local oil = require 'oil'
+  local dir = oil.get_current_dir()
+  if not dir then return end
+  local start = vim.fn.line 'v'
+  local finish = vim.fn.line '.'
+  if start > finish then start, finish = finish, start end
+  local files = {}
+  for lnum = start, finish do
+    local entry = oil.get_entry_on_line(0, lnum)
+    if entry and (entry.type == 'file' or entry.type == 'directory') then
+      files[#files + 1] = dir .. entry.name
+    end
+  end
+  if #files == 0 then return end
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Esc>', true, false, true), 'nx', false)
+  Snacks.picker.grep { dirs = files }
+end, { desc = 'Grep selected files' })
 map('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
 -- ── Windows ──────────────────────────────────────────────────────────
