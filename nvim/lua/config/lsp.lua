@@ -34,6 +34,3 @@ vim.lsp.handlers['textDocument/hover'] = function(err, result, ctx, config)
   end
   return vim.lsp.handlers.hover(err, result, ctx, config)
 end
-vim.keymap.set({ 'n', 'i' }, '<C-s>', function()
-  vim.lsp.buf.signature_help()
-end, { desc = 'Signature Help' })

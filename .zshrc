@@ -108,6 +108,7 @@ fi
 # Environment Variables
 # =========================================
 unset CI
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
 export EDITOR=nvim
 export COLORTERM=truecolor
 export LANG=en_US.UTF-8
