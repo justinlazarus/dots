@@ -101,6 +101,12 @@ map('n', '<leader>uh', function()
 end, { desc = 'Toggle inlay hints' })
 map('n', '<leader>uC', function() Snacks.picker.colorschemes() end, { desc = 'Colorschemes' })
 
+-- ── NX ───────────────────────────────────────────────────────────────
+map('n', '<leader>ox', function() require('config.nx').pick() end, { desc = 'NX: pick target' })
+map('n', '<leader>ob', function() require('config.nx').run('build') end, { desc = 'NX: build project' })
+map('n', '<leader>ot', function() require('config.nx').run('test') end, { desc = 'NX: test project' })
+map('n', '<leader>ol', function() require('config.nx').show_output() end, { desc = 'NX: last output' })
+
 -- ── Commands ─────────────────────────────────────────────────────────
 vim.api.nvim_create_user_command('UpdateAll', function()
   print 'Updating plugins...'
