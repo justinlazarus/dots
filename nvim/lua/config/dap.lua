@@ -64,19 +64,3 @@ dap.listeners.before.event_exited['dapui_config'] = function()
   dapui.close()
 end
 
--- Keymaps
-local map = vim.keymap.set
-map('n', '<F5>', dap.continue, { desc = 'Debug: Continue' })
-map('n', '<F10>', dap.step_over, { desc = 'Debug: Step Over' })
-map('n', '<F11>', dap.step_into, { desc = 'Debug: Step Into' })
-map('n', '<F12>', dap.step_out, { desc = 'Debug: Step Out' })
-map('n', '<leader>db', dap.toggle_breakpoint, { desc = 'Debug: Toggle Breakpoint' })
-map('n', '<leader>dB', function()
-  dap.set_breakpoint(vim.fn.input 'Breakpoint condition: ')
-end, { desc = 'Debug: Conditional Breakpoint' })
-map('n', '<leader>dc', dap.continue, { desc = 'Debug: Continue' })
-map('n', '<leader>du', dapui.toggle, { desc = 'Debug: Toggle UI' })
-map('n', '<leader>dr', dap.repl.open, { desc = 'Debug: REPL' })
-map('n', '<leader>dk', function()
-  require('dap.ui.widgets').hover()
-end, { desc = 'Debug: Hover Variable' })

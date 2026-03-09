@@ -108,6 +108,7 @@ fi
 # Environment Variables
 # =========================================
 unset CI
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
 export EDITOR=nvim
 export COLORTERM=truecolor
 export LANG=en_US.UTF-8
@@ -184,3 +185,4 @@ PROMPT='[ %F{#9ece6a}%n%f :: %~ ] '
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
 
 if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)"; fi
+alias lg='lazygit'
