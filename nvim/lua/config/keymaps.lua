@@ -87,6 +87,21 @@ map('n', '<leader>gf', function() Snacks.picker.git_log_file() end, { desc = 'Lo
 map('n', '<leader>gd', function() Snacks.picker.git_diff() end, { desc = 'Diff hunks' })
 map('n', '<leader>gS', function() Snacks.picker.git_stash() end, { desc = 'Stash' })
 
+-- ── GitHub (Octo) ────────────────────────────────────────────────────
+map('n', '<leader>oi', '<cmd>Octo issue list<CR>', { desc = 'Issues' })
+map('n', '<leader>op', function()
+  -- Get current repo and filter for non-draft PRs targeting main
+  local repo = vim.fn.systemlist('gh repo view --json nameWithOwner -q .nameWithOwner')[1]
+  if repo and repo ~= '' then
+    vim.cmd('Octo search repo:' .. repo .. ' is:pr is:open base:main draft:false')
+  else
+    vim.cmd('Octo pr list baseRefName=main')
+  end
+end, { desc = 'Pull requests (main)' })
+map('n', '<leader>oP', '<cmd>Octo pr list<CR>', { desc = 'Pull requests (all)' })
+map('n', '<leader>on', '<cmd>Octo notification list<CR>', { desc = 'Notifications' })
+map('n', '<leader>oo', '<cmd>Octo<CR>', { desc = 'Octo commands' })
+
 -- ── LSP ──────────────────────────────────────────────────────────────
 map('n', 'gd', function() Snacks.picker.lsp_definitions() end, { desc = 'Definition' })
 map('n', 'gD', function() Snacks.picker.lsp_declarations() end, { desc = 'Declaration' })
@@ -121,10 +136,10 @@ end, { desc = 'Toggle inlay hints' })
 map('n', '<leader>uC', function() Snacks.picker.colorschemes() end, { desc = 'Colorschemes' })
 
 -- ── NX ───────────────────────────────────────────────────────────────
-map('n', '<leader>ox', function() require('config.nx').pick() end, { desc = 'NX: pick target' })
-map('n', '<leader>ob', function() require('config.nx').run('build') end, { desc = 'NX: build project' })
-map('n', '<leader>ot', function() require('config.nx').run('test') end, { desc = 'NX: test project' })
-map('n', '<leader>ol', function() require('config.nx').show_output() end, { desc = 'NX: last output' })
+map('n', '<leader>nx', function() require('config.nx').pick() end, { desc = 'NX: pick target' })
+map('n', '<leader>nb', function() require('config.nx').run('build') end, { desc = 'NX: build project' })
+map('n', '<leader>nt', function() require('config.nx').run('test') end, { desc = 'NX: test project' })
+map('n', '<leader>nl', function() require('config.nx').show_output() end, { desc = 'NX: last output' })
 
 -- ── Commands ─────────────────────────────────────────────────────────
 vim.api.nvim_create_user_command('UpdateAll', function()
