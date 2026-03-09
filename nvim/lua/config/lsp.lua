@@ -1,4 +1,4 @@
-vim.lsp.enable { 'lua_ls', 'ts_ls', 'jsonls', 'yamlls', 'angularls', 'eslint', 'rust_analyzer', 'terraform_ls', 'gopls' }
+vim.lsp.enable { 'lua_ls', 'ts_ls', 'jsonls', 'yamlls', 'angularls', 'eslint', 'rust_analyzer', 'terraform_ls', 'gopls', 'taplo', 'dockerls', 'bashls', 'sqlls' }
 
 vim.api.nvim_create_user_command('LspLog', function()
   vim.cmd.edit(vim.lsp.log.get_filename())

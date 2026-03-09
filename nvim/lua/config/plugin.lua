@@ -39,6 +39,9 @@ if ok then
       'angular',
       'xml',
       'yaml',
+      'toml',
+      'dockerfile',
+      'sql',
     },
     sync_install = false,
     auto_install = true,
@@ -95,10 +98,19 @@ vim.schedule(function()
   ensure_installed 'sqlfmt' -- SQL formatter
   ensure_installed 'stylua' -- Lua formatter
   ensure_installed 'yamlfmt' -- YAML formatter
-  if vim.fn.executable 'terraform' == 1 then ensure_installed 'terraform-ls' end
-  if vim.fn.executable 'rustc' == 1 then ensure_installed 'rust-analyzer' end
-  if vim.fn.executable 'go' == 1 then ensure_installed 'gopls' end
+  if vim.fn.executable 'terraform' == 1 then
+    ensure_installed 'terraform-ls'
+  end
+  if vim.fn.executable 'rustc' == 1 then
+    ensure_installed 'rust-analyzer'
+  end
+  if vim.fn.executable 'go' == 1 then
+    ensure_installed 'gopls'
+  end
   ensure_installed 'netcoredbg' -- C# debugger
+  ensure_installed 'dockerfile-language-server' -- dockerls
+  ensure_installed 'bash-language-server' -- bashls
+  ensure_installed 'sql-language-server' -- sqlls
 end)
 
 -----------------------------------------------------------------------------------------------------which-key
@@ -113,12 +125,11 @@ wk.add {
   { '<leader>f', group = 'Find' },
   { '<leader>g', group = 'Git' },
   { '<leader>s', group = 'Search' },
-  { '<leader>c', group = 'Code' },
-  { '<leader>d', group = 'Dotnet/NX' },
-  { '<leader>t', group = 'Toggle' },
+  { '<leader>b', group = 'Buffer' },
+  { '<leader>d', group = 'Debug' },
   { '<leader>u', group = 'UI' },
   { '<leader>h', group = 'Hunk' },
-  { '<leader>j', group = 'Journal' },
+  { '<leader>o', group = 'Nx', icon = '󱁤' },
 }
 
 ---------------------------------------------------------------------------------------------------------- oil
@@ -149,8 +160,12 @@ require('nvim-treesitter-textobjects').setup { select = { lookahead = true } }
 
 local select_textobject = require('nvim-treesitter-textobjects.select').select_textobject
 for _, mode in ipairs { 'x', 'o' } do
-  vim.keymap.set(mode, 'am', function() select_textobject('@function.outer') end, { desc = 'Around method/function' })
-  vim.keymap.set(mode, 'im', function() select_textobject('@function.inner') end, { desc = 'Inside method/function' })
+  vim.keymap.set(mode, 'am', function()
+    select_textobject '@function.outer'
+  end, { desc = 'Around method/function' })
+  vim.keymap.set(mode, 'im', function()
+    select_textobject '@function.inner'
+  end, { desc = 'Inside method/function' })
 end
 
 ------------------------------------------------------------------------------------------------------ conform
@@ -190,12 +205,16 @@ require('conform').setup {
   },
 }
 
-vim.keymap.set('n', '<leader>cf', function()
+vim.keymap.set('n', '<leader>bf', function()
   require('conform').format { async = true, lsp_format = 'fallback' }
 end, { desc = 'Format buffer' })
 
+vim.keymap.set('n', '<leader>bd', function()
+  Snacks.bufdelete()
+end, { desc = 'Delete buffer' })
+
 -- Toggle format-on-save
-vim.keymap.set('n', '<leader>tf', function()
+vim.keymap.set('n', '<leader>bF', function()
   vim.g.disable_autoformat = not vim.g.disable_autoformat
   if vim.g.disable_autoformat then
     vim.notify('Format-on-save disabled', vim.log.levels.INFO)

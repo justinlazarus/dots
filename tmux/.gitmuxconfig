@@ -31,19 +31,19 @@ tmux:
     # of Git status elements. See the STYLES section of tmux man page.
     # https://man7.org/linux/man-pages/man1/tmux.1.html#STYLES.
     styles:
-        clear: '#[fg=#{@thm_fg}]'
-        state: '#[fg=#{@thm_red},bold]'
-        branch: '#[fg=#{@thm_fg},bold]'
-        remote: '#[fg=#{@thm_teal}]'
-        divergence: '#[fg=#{@thm_fg}]'
-        staged: '#[fg=#{@thm_green},bold]'
-        conflict: '#[fg=#{@thm_red},bold]'
-        modified: '#[fg=#{@thm_yellow},bold]'
-        untracked: '#[fg=#{@thm_mauve},bold]'
-        stashed: '#[fg=#{@thm_blue},bold]'
-        clean: '#[fg=#{@thm_rosewater},bold]'
-        insertions: '#[fg=#{@thm_green}]'
-        deletions: '#[fg=#{@thm_red}]'
+        clear: '#[fg=#1e1e2e,bg=#a6e3a1]'
+        state: '#[fg=#f38ba8,bg=#a6e3a1,bold]'
+        branch: '#[fg=#1e1e2e,bg=#a6e3a1,bold]'
+        remote: '#[fg=#89dceb,bg=#a6e3a1]'
+        divergence: '#[fg=#1e1e2e,bg=#a6e3a1]'
+        staged: '#[fg=#1e1e2e,bg=#a6e3a1,bold]'
+        conflict: '#[fg=#f38ba8,bg=#a6e3a1,bold]'
+        modified: '#[fg=#1e1e2e,bg=#a6e3a1,bold]'
+        untracked: '#[fg=#1e1e2e,bg=#a6e3a1,bold]'
+        stashed: '#[fg=#89b4fa,bg=#a6e3a1,bold]'
+        clean: '#[fg=#1e1e2e,bg=#a6e3a1,bold]'
+        insertions: '#[fg=#1e1e2e,bg=#a6e3a1]'
+        deletions: '#[fg=#f38ba8,bg=#a6e3a1]'
 
     # The layout section defines what components gitmux shows and the order in
     # which they appear on tmux status bar.

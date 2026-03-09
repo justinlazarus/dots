@@ -115,7 +115,7 @@ map('n', '<leader>dk', function()
 end, { desc = 'Hover variable' })
 
 -- ── Toggle ───────────────────────────────────────────────────────────
-map('n', '<leader>uh', function()
+map('n', '<leader>bh', function()
   vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled())
 end, { desc = 'Toggle inlay hints' })
 map('n', '<leader>uC', function() Snacks.picker.colorschemes() end, { desc = 'Colorschemes' })
