@@ -9,34 +9,37 @@ bell-features = border
 mouse-hide-while-typing = true
 confirm-close-surface = true
 shell-integration = zsh
-window-padding-x = 4
-window-padding-y = 4
-background-opacity = 0.9
-background-blur-radius = 20
-macos-titlebar-style = native
+window-padding-x = 16
+window-padding-y = 12,6
+window-padding-color = extend
+background-opacity = 1
+background-blur-radius = 0
+macos-titlebar-style = hidden
+window-theme = ghostty
+window-decoration = true
 
-# Tokyo Night Storm theme
-background = #24283b
-foreground = #c0caf5
+# Catppuccin Mocha theme
+background = #1e1e2e
+foreground = #cdd6f4
 
 # Selection colors
-selection-background = #364a82
-selection-foreground = #c0caf5
+selection-background = #585b70
+selection-foreground = #cdd6f4
 
 # Color palette
-palette = 0=#1d202f
-palette = 1=#f7768e
-palette = 2=#9ece6a
-palette = 3=#e0af68
-palette = 4=#7aa2f7
-palette = 5=#bb9af7
-palette = 6=#7dcfff
-palette = 7=#a9b1d6
-palette = 8=#414868
-palette = 9=#f7768e
-palette = 10=#9ece6a
-palette = 11=#e0af68
-palette = 12=#7aa2f7
-palette = 13=#bb9af7
-palette = 14=#7dcfff
-palette = 15=#c0caf5
+palette = 0=#45475a
+palette = 1=#f38ba8
+palette = 2=#a6e3a1
+palette = 3=#f9e2af
+palette = 4=#89b4fa
+palette = 5=#f5c2e7
+palette = 6=#94e2d5
+palette = 7=#bac2de
+palette = 8=#585b70
+palette = 9=#f38ba8
+palette = 10=#a6e3a1
+palette = 11=#f9e2af
+palette = 12=#89b4fa
+palette = 13=#f5c2e7
+palette = 14=#94e2d5
+palette = 15=#a6adc8

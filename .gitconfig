@@ -6,6 +6,8 @@
 	autocrlf = input
 	commentChar = $
 	editor = nvim
+[diff]
+	external = difft
 [pull]
 	rebase = false
 [alias]

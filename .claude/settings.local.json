@@ -9,7 +9,13 @@
       "Bash(gh api:*)",
       "Bash(python3:*)",
       "Bash(timeout:*)",
-      "Bash(nvim:*)"
+      "Bash(nvim:*)",
+      "Bash(brew list:*)",
+      "Bash(brew --prefix worktrunk)",
+      "Bash(wt config:*)",
+      "Bash(find ~ -name \"*worktrunk*\" -o -name \"*wt*\" -type f 2>/dev/null | grep -v \".git\\\\|.Trash\\\\|Library\" | head -20)",
+      "Bash(mv ~/.config/worktrunk /Users/djpoo/dots/worktrunk && ln -s /Users/djpoo/dots/worktrunk ~/.config/worktrunk)",
+      "Bash(wt hook:*)"
     ]
   }
 }
