@@ -293,6 +293,117 @@ vim.cmd.colorscheme 'tokyonight-storm'
 
 --------------------------------------------------------------------------------------------------------- octo
 
+-- Custom goto file function for Octo PR diffs (defined before setup)
+_G.octo_goto_file = function()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local bufname = vim.api.nvim_buf_get_name(bufnr)
+  
+  -- Check if we're in an Octo buffer
+  if not string.match(bufname, 'octo://') then
+    -- Fall back to default gf behavior
+    local ok, err = pcall(function()
+      vim.cmd('normal! gf')
+    end)
+    if not ok then
+      vim.notify('Could not find file: ' .. tostring(err), vim.log.levels.WARN)
+    end
+    return
+  end
+  
+  -- Get current line number in the diff
+  local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+  local total_lines = vim.api.nvim_buf_line_count(bufnr)
+  
+  -- Search backwards for the diff header to find the file path
+  local file_path = nil
+  for i = cursor_line, math.max(1, cursor_line - 500), -1 do
+    local line = vim.api.nvim_buf_get_lines(bufnr, i - 1, i, false)[1]
+    if line then
+      -- Try multiple patterns to match file paths
+      local path = line:match('^%+%+%+ b/(.+)$')  -- +++ b/path/to/file
+        or line:match('^%-%-%- a/(.+)$')          -- --- a/path/to/file
+        or line:match('^diff %-%-git a/[^%s]+ b/(.+)$')  -- diff --git a/... b/path
+        or line:match('^diff %-%-git a/(.+) b/')  -- diff --git a/path b/...
+      
+      if path then
+        file_path = path:gsub('%s+$', '')  -- Trim trailing whitespace
+        break
+      end
+    end
+  end
+  
+  if not file_path then
+    -- Debug: show some context
+    local context = {}
+    for i = math.max(1, cursor_line - 10), math.min(total_lines, cursor_line + 2) do
+      local line = vim.api.nvim_buf_get_lines(bufnr, i - 1, i, false)[1]
+      if line then
+        table.insert(context, string.format('%d: %s', i, line:sub(1, 80)))
+      end
+    end
+    -- Write to a temp file so we can see it
+    local debug_file = '/tmp/octo_debug.txt'
+    local f = io.open(debug_file, 'w')
+    if f then
+      f:write('Buffer: ' .. bufname .. '\n')
+      f:write('Cursor line: ' .. cursor_line .. '\n')
+      f:write('Context:\n' .. table.concat(context, '\n'))
+      f:close()
+      vim.notify('Could not find file path. Debug written to ' .. debug_file, vim.log.levels.ERROR)
+      vim.cmd('edit ' .. debug_file)
+    else
+      vim.notify('Could not find file path in diff', vim.log.levels.ERROR)
+    end
+    return
+  end
+  
+  -- Try to determine the line number from the diff hunk header
+  local target_line = nil
+  for i = cursor_line, math.max(1, cursor_line - 100), -1 do
+    local line = vim.api.nvim_buf_get_lines(bufnr, i - 1, i, false)[1]
+    if line then
+      -- Match hunk header like: @@ -10,5 +10,7 @@
+      local old_start, old_count, new_start, new_count = line:match('^@@ %-(%d+),?(%d*) %+(%d+),?(%d*) @@')
+      if new_start then
+        -- Calculate offset from hunk start to cursor
+        local offset = 0
+        for j = i + 1, cursor_line do
+          local hunk_line = vim.api.nvim_buf_get_lines(bufnr, j - 1, j, false)[1]
+          if hunk_line then
+            local first_char = hunk_line:sub(1, 1)
+            -- Count lines that exist in the new file (+ and context lines, not -)
+            if first_char ~= '-' and first_char ~= '\\' then
+              offset = offset + 1
+            end
+          end
+        end
+        target_line = tonumber(new_start) + offset - 1
+        break
+      end
+    end
+  end
+  
+  -- Open the file
+  local git_root = vim.fn.systemlist('git rev-parse --show-toplevel')[1]
+  if not git_root or git_root == '' then
+    vim.notify('Not in a git repository', vim.log.levels.ERROR)
+    return
+  end
+  
+  local full_path = git_root .. '/' .. file_path
+  
+  if vim.fn.filereadable(full_path) == 1 then
+    vim.cmd('edit ' .. vim.fn.fnameescape(full_path))
+    if target_line and target_line > 0 then
+      vim.api.nvim_win_set_cursor(0, {target_line, 0})
+      vim.cmd('normal! zz')  -- Center the line on screen
+    end
+    vim.notify('Opened ' .. file_path .. (target_line and (':' .. target_line) or ''), vim.log.levels.INFO)
+  else
+    vim.notify('File not found: ' .. full_path, vim.log.levels.ERROR)
+  end
+end
+
 require('octo').setup {
   picker = 'snacks',
   enable_builtin = true,
@@ -421,3 +532,18 @@ require('octo').setup {
     },
   },
 }
+
+-- Map to jump from diff to actual file in Octo buffers
+-- Works in both PR view and review diff view
+vim.api.nvim_create_autocmd({'FileType', 'BufEnter'}, {
+  pattern = {'octo', 'octo_*', '*'},
+  callback = function(ev)
+    local bufname = vim.api.nvim_buf_get_name(ev.buf)
+    -- Check if it's an Octo buffer by name (review diffs don't have octo filetype)
+    if string.match(bufname, 'octo://') then
+      vim.keymap.set('n', '<leader>of', '<cmd>lua _G.octo_goto_file()<CR>', 
+        { buffer = ev.buf, desc = 'Open file from diff', noremap = true, silent = false })
+    end
+  end,
+})
+
