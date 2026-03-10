@@ -184,5 +184,8 @@ PROMPT='[ %F{#9ece6a}%n%f :: %~ ] '
 # =========================================
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
 
-if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)"; fi
+if command -v wt >/dev/null 2>&1; then
+    eval "$(command wt config shell init zsh)"
+    alias wts='wt switch --no-cd'
+fi
 alias lg='lazygit'
