@@ -5,10 +5,10 @@ vim.pack.add {
   'https://github.com/folke/lazydev.nvim',
   'https://github.com/saghen/blink.cmp',
   'https://github.com/justinlazarus/roslyn.nvim',
-  'https://github.com/folke/tokyonight.nvim',
+  'https://github.com/catppuccin/nvim',
   'https://github.com/stevearc/conform.nvim',
   'https://github.com/lewis6991/gitsigns.nvim',
-  'https://github.com/echasnovski/mini.statusline',
+  'https://github.com/nvim-lualine/lualine.nvim',
   'https://github.com/nvim-tree/nvim-web-devicons',
   'https://github.com/stevearc/oil.nvim',
   'https://github.com/mfussenegger/nvim-dap',
@@ -247,32 +247,76 @@ require('gitsigns').setup {
   },
 }
 
----------------------------------------------------------------------------------------------- mini.statusline
+------------------------------------------------------------------------------------------------------- lualine
 
-require('mini.statusline').setup {
-  content = {
-    active = function()
-      local mode, mode_hl = require('mini.statusline').section_mode { trunc_width = 120 }
-      local diagnostics = require('mini.statusline').section_diagnostics { trunc_width = 75 }
-      local lsp = require('mini.statusline').section_lsp { trunc_width = 75 }
-      local filename = require('mini.statusline').section_filename { trunc_width = 80 }
-      local fileinfo = require('mini.statusline').section_fileinfo { trunc_width = 120 }
-      local location = require('mini.statusline').section_location { trunc_width = 75 }
-      local search = require('mini.statusline').section_searchcount { trunc_width = 75 }
-      return require('mini.statusline').combine_groups {
-        { hl = mode_hl, strings = { mode } },
-        { hl = 'MiniStatuslineDevinfo', strings = { '', '', diagnostics, lsp } },
-        '%<',
-        { hl = 'MiniStatuslineFilename', strings = { filename } },
-        '%=',
-        { hl = 'MiniStatuslineFileinfo', strings = { fileinfo } },
-        { hl = mode_hl, strings = { search, location } },
-      }
-    end,
-    inactive = nil,
+-- Custom catppuccin theme override to match tmux bar bg
+local custom_theme = require('catppuccin.utils.lualine')('mocha')
+custom_theme.normal.c = { bg = '#1e1e2e', fg = '#cdd6f4' }
+custom_theme.inactive.a = { bg = '#1e1e2e', fg = '#89b4fa' }
+custom_theme.inactive.b = { bg = '#1e1e2e', fg = '#585b70', gui = 'bold' }
+custom_theme.inactive.c = { bg = '#1e1e2e', fg = '#6c7086' }
+
+require('lualine').setup {
+  options = {
+    theme = custom_theme,
+    section_separators = { left = '', right = '' },
+    component_separators = '',
+    globalstatus = true,
   },
-  use_icons = true,
+  sections = {
+    lualine_a = { { 'mode', separator = { left = '', right = '' } } },
+    lualine_b = { 'diagnostics' },
+    lualine_c = { 'filename' },
+    lualine_x = { 'filetype' },
+    lualine_y = { 'progress' },
+    lualine_z = { { 'location', separator = { left = '', right = '' } } },
+  },
+  inactive_sections = {
+    lualine_c = { 'filename' },
+    lualine_x = { 'location' },
+  },
+  tabline = {
+    lualine_a = {},
+    lualine_b = {},
+    lualine_c = { { 'buffers', separator = { left = '', right = '' }, buffers_color = { active = 'lualine_a_normal', inactive = 'lualine_b_normal' } } },
+    lualine_x = {},
+    lualine_y = {},
+    lualine_z = {},
+  },
 }
+
+-- Padding below tabline
+vim.o.winbar = ' '
+
+-- Fix all tabline-related highlight backgrounds after lualine loads
+vim.api.nvim_create_autocmd({ 'ColorScheme', 'VimEnter' }, {
+  callback = function()
+    vim.schedule(function()
+      local base = '#1e1e2e'
+      vim.api.nvim_set_hl(0, 'TabLineFill', { bg = base })
+      -- Fix lualine's internal tabline transition highlights
+      for _, name in ipairs(vim.fn.getcompletion('lualine_c_', 'highlight')) do
+        local hl = vim.api.nvim_get_hl(0, { name = name })
+        hl.bg = tonumber('1e1e2e', 16)
+        vim.api.nvim_set_hl(0, name, hl)
+      end
+    end)
+  end,
+})
+
+-- Hide tabline when only one buffer is listed
+local function update_tabline()
+  local listed = vim.tbl_filter(function(b)
+    return vim.bo[b].buflisted
+  end, vim.api.nvim_list_bufs())
+  vim.o.showtabline = #listed > 1 and 2 or 0
+end
+
+vim.api.nvim_create_autocmd({ 'BufAdd', 'BufDelete', 'BufWipeout', 'VimEnter' }, {
+  callback = function()
+    vim.schedule(update_tabline)
+  end,
+})
 
 ------------------------------------------------------------------------------------------------------- roslyn
 
@@ -283,13 +327,18 @@ require('roslyn').setup {
   fast_init = true,
 }
 
--------------------------------------------------------------------------------------------------- tokyonight
+-------------------------------------------------------------------------------------------------- catppuccin
 
-require('tokyonight').setup {
-  style = 'storm',
+require('catppuccin').setup {
+  flavour = 'mocha',
+  custom_highlights = function(colors)
+    return {
+      TabLineFill = { bg = colors.base },
+    }
+  end,
 }
 
-vim.cmd.colorscheme 'tokyonight-storm'
+vim.cmd.colorscheme 'catppuccin-mocha'
 
 --------------------------------------------------------------------------------------------------------- octo
 
