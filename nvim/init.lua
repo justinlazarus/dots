@@ -1,7 +1,7 @@
 require 'config.options'
+require 'config.snacks'
 require 'config.plugin'
 require 'config.keymaps'
 require 'config.autocmds'
 require 'config.lsp'
-require 'config.snacks'
 require 'config.dap'

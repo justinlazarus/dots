@@ -16,6 +16,8 @@ vim.pack.add {
   'https://github.com/nvim-neotest/nvim-nio',
   'https://github.com/nvim-treesitter/nvim-treesitter-context',
   'https://github.com/nvim-treesitter/nvim-treesitter-textobjects',
+  'https://github.com/nvim-lua/plenary.nvim',
+  'https://github.com/pwntester/octo.nvim.git',
 }
 
 --------------------------------------------------------------------------------------------------- treesitter
@@ -129,7 +131,17 @@ wk.add {
   { '<leader>d', group = 'Debug' },
   { '<leader>u', group = 'UI' },
   { '<leader>h', group = 'Hunk' },
-  { '<leader>o', group = 'Nx', icon = '󱁤' },
+  { '<leader>n', group = 'Nx', icon = '󱁤' },
+  { '<leader>o', group = 'Octo', icon = '󰊤' },
+  { '<leader>oi', group = 'Issue' },
+  { '<leader>op', group = 'Pull Request' },
+  { '<leader>oa', group = 'Assignee' },
+  { '<leader>ol', group = 'Label' },
+  { '<leader>oc', group = 'Comment' },
+  { '<leader>or', group = 'Reaction' },
+  { '<leader>ov', group = 'Review' },
+  { '<leader>os', group = 'Suggestion' },
+  { '<leader>og', group = 'Go to' },
 }
 
 ---------------------------------------------------------------------------------------------------------- oil
@@ -264,7 +276,12 @@ require('mini.statusline').setup {
 
 ------------------------------------------------------------------------------------------------------- roslyn
 
-require('roslyn').setup { fast_init = true }
+require('roslyn').setup {
+  filewatching = 'auto',
+  broad_search = false,
+  lock_target = false,
+  fast_init = true,
+}
 
 -------------------------------------------------------------------------------------------------- tokyonight
 
@@ -273,3 +290,134 @@ require('tokyonight').setup {
 }
 
 vim.cmd.colorscheme 'tokyonight-storm'
+
+--------------------------------------------------------------------------------------------------------- octo
+
+require('octo').setup {
+  picker = 'snacks',
+  enable_builtin = true,
+  mappings_disable_default = true,
+  pull_requests = {
+    order_by = {
+      field = 'UPDATED_AT',        -- CREATED_AT, UPDATED_AT, or COMMENTS
+      direction = 'DESC'            -- DESC or ASC
+    },
+    always_select_remote_on_create = false,
+    use_branch_name_as_title = false
+  },
+  issues = {
+    order_by = {
+      field = 'UPDATED_AT',         -- CREATED_AT, UPDATED_AT, or COMMENTS  
+      direction = 'DESC'            -- DESC or ASC
+    }
+  },
+  picker_config = {
+    use_emojis = false,
+    mappings = {
+      open_in_browser = { lhs = '<C-b>', desc = 'open issue in browser' },
+      copy_url = { lhs = '<C-y>', desc = 'copy url to system clipboard' },
+      checkout_pr = { lhs = '<C-o>', desc = 'checkout pull request' },
+      merge_pr = { lhs = '<C-r>', desc = 'merge pull request' },
+    },
+  },
+  mappings = {
+    issue = {
+      issue_options = { lhs = '<CR>', desc = 'show issue options' },
+      close_issue = { lhs = '<leader>oic', desc = 'close issue' },
+      reopen_issue = { lhs = '<leader>oio', desc = 'reopen issue' },
+      list_issues = { lhs = '<leader>oil', desc = 'list open issues on same repo' },
+      reload = { lhs = '<leader>oir', desc = 'reload issue' },
+      open_in_browser = { lhs = '<leader>oib', desc = 'open issue in browser' },
+      copy_url = { lhs = '<leader>oiy', desc = 'copy url to system clipboard' },
+      add_assignee = { lhs = '<leader>oaa', desc = 'add assignee' },
+      remove_assignee = { lhs = '<leader>oad', desc = 'remove assignee' },
+      create_label = { lhs = '<leader>olc', desc = 'create label' },
+      add_label = { lhs = '<leader>ola', desc = 'add label' },
+      remove_label = { lhs = '<leader>old', desc = 'remove label' },
+      goto_issue = { lhs = '<leader>ogi', desc = 'navigate to a local repo issue' },
+      add_comment = { lhs = '<leader>oca', desc = 'add comment' },
+      delete_comment = { lhs = '<leader>ocd', desc = 'delete comment' },
+      next_comment = { lhs = ']c', desc = 'go to next comment' },
+      prev_comment = { lhs = '[c', desc = 'go to previous comment' },
+      react_hooray = { lhs = '<leader>orp', desc = 'add/remove 🎉 reaction' },
+      react_heart = { lhs = '<leader>orh', desc = 'add/remove ❤️ reaction' },
+      react_eyes = { lhs = '<leader>ore', desc = 'add/remove 👀 reaction' },
+      react_thumbs_up = { lhs = '<leader>or+', desc = 'add/remove 👍 reaction' },
+      react_thumbs_down = { lhs = '<leader>or-', desc = 'add/remove 👎 reaction' },
+      react_rocket = { lhs = '<leader>orr', desc = 'add/remove 🚀 reaction' },
+      react_laugh = { lhs = '<leader>orl', desc = 'add/remove 😄 reaction' },
+      react_confused = { lhs = '<leader>orc', desc = 'add/remove 😕 reaction' },
+    },
+    pull_request = {
+      pr_options = { lhs = '<CR>', desc = 'show PR options' },
+      checkout_pr = { lhs = '<leader>opo', desc = 'checkout PR' },
+      merge_pr = { lhs = '<leader>opm', desc = 'merge PR' },
+      list_commits = { lhs = '<leader>opc', desc = 'list PR commits' },
+      list_changed_files = { lhs = '<leader>opf', desc = 'list PR changed files' },
+      show_pr_diff = { lhs = '<leader>opd', desc = 'show PR diff' },
+      add_reviewer = { lhs = '<leader>ova', desc = 'add reviewer' },
+      remove_reviewer = { lhs = '<leader>ovd', desc = 'remove reviewer request' },
+      close_issue = { lhs = '<leader>oic', desc = 'close PR' },
+      reopen_issue = { lhs = '<leader>oio', desc = 'reopen PR' },
+      list_issues = { lhs = '<leader>oil', desc = 'list open issues on same repo' },
+      reload = { lhs = '<leader>opr', desc = 'reload PR' },
+      open_in_browser = { lhs = '<leader>opb', desc = 'open PR in browser' },
+      copy_url = { lhs = '<leader>opy', desc = 'copy url to system clipboard' },
+      goto_file = { lhs = 'gf', desc = 'go to file' },
+      add_assignee = { lhs = '<leader>oaa', desc = 'add assignee' },
+      remove_assignee = { lhs = '<leader>oad', desc = 'remove assignee' },
+      create_label = { lhs = '<leader>olc', desc = 'create label' },
+      add_label = { lhs = '<leader>ola', desc = 'add label' },
+      remove_label = { lhs = '<leader>old', desc = 'remove label' },
+      goto_issue = { lhs = '<leader>ogi', desc = 'navigate to a local repo issue' },
+      add_comment = { lhs = '<leader>oca', desc = 'add comment' },
+      delete_comment = { lhs = '<leader>ocd', desc = 'delete comment' },
+      next_comment = { lhs = ']c', desc = 'go to next comment' },
+      prev_comment = { lhs = '[c', desc = 'go to previous comment' },
+      react_hooray = { lhs = '<leader>orp', desc = 'add/remove 🎉 reaction' },
+      react_heart = { lhs = '<leader>orh', desc = 'add/remove ❤️ reaction' },
+      react_eyes = { lhs = '<leader>ore', desc = 'add/remove 👀 reaction' },
+      react_thumbs_up = { lhs = '<leader>or+', desc = 'add/remove 👍 reaction' },
+      react_thumbs_down = { lhs = '<leader>or-', desc = 'add/remove 👎 reaction' },
+      react_rocket = { lhs = '<leader>orr', desc = 'add/remove 🚀 reaction' },
+      react_laugh = { lhs = '<leader>orl', desc = 'add/remove 😄 reaction' },
+      react_confused = { lhs = '<leader>orc', desc = 'add/remove 😕 reaction' },
+      review_start = { lhs = '<leader>ovs', desc = 'start a review for the current PR' },
+      review_resume = { lhs = '<leader>ovr', desc = 'resume a pending review for the current PR' },
+    },
+    review_thread = {
+      goto_issue = { lhs = '<leader>ogi', desc = 'navigate to a local repo issue' },
+      add_comment = { lhs = '<leader>oca', desc = 'add comment' },
+      add_suggestion = { lhs = '<leader>osa', desc = 'add suggestion' },
+      delete_comment = { lhs = '<leader>ocd', desc = 'delete comment' },
+      next_comment = { lhs = ']c', desc = 'go to next comment' },
+      prev_comment = { lhs = '[c', desc = 'go to previous comment' },
+      select_next_entry = { lhs = ']q', desc = 'move to next changed file' },
+      select_prev_entry = { lhs = '[q', desc = 'move to previous changed file' },
+    },
+    review_diff = {
+      submit_review = { lhs = '<leader>ovs', desc = 'submit review' },
+      discard_review = { lhs = '<leader>ovd', desc = 'discard review' },
+      add_review_comment = { lhs = '<leader>oca', desc = 'add a new review comment' },
+      add_review_suggestion = { lhs = '<leader>osa', desc = 'add a new review suggestion' },
+      next_thread = { lhs = ']t', desc = 'move to next thread' },
+      prev_thread = { lhs = '[t', desc = 'move to previous thread' },
+      select_next_entry = { lhs = ']q', desc = 'move to next changed file' },
+      select_prev_entry = { lhs = '[q', desc = 'move to previous changed file' },
+      close_review_tab = { lhs = '<C-c>', desc = 'close review tab' },
+    },
+    file_panel = {
+      next_entry = { lhs = 'j', desc = 'move to next changed file' },
+      prev_entry = { lhs = 'k', desc = 'move to previous changed file' },
+      select_entry = { lhs = '<cr>', desc = 'show selected changed file diffs' },
+      select_next_entry = { lhs = ']q', desc = 'move to next changed file' },
+      select_prev_entry = { lhs = '[q', desc = 'move to previous changed file' },
+    },
+    submit_win = {
+      approve_review = { lhs = '<C-a>', desc = 'approve review', mode = { 'n', 'i' } },
+      comment_review = { lhs = '<C-m>', desc = 'comment review', mode = { 'n', 'i' } },
+      request_changes = { lhs = '<C-r>', desc = 'request changes review', mode = { 'n', 'i' } },
+      close_review_tab = { lhs = '<C-c>', desc = 'close review tab', mode = { 'n', 'i' } },
+    },
+  },
+}

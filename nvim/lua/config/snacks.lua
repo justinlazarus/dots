@@ -56,7 +56,15 @@ Snacks.setup {
     },
   },
   bigfile = { enabled = true },
-  dashboard = { enabled = true },
+  dashboard = {
+    enabled = true,
+    sections = {
+      { section = 'header' },
+      { section = 'keys', gap = 1, padding = 1 },
+      { section = 'recent_files', title = 'Recent Files', padding = 1 },
+      { section = 'projects', title = 'Projects', padding = 1 },
+    },
+  },
   indent = { enabled = true },
   input = { enabled = true },
   notifier = { enabled = true },
