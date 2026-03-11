@@ -1,5 +1,5 @@
-font-family = "0x Proto Nerd Font"
-font-size = 16
+font-family = "0xProto"
+font-size = 14
 copy-on-select = clipboard
 clipboard-paste-protection = false
 clipboard-write = allow

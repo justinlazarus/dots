@@ -250,7 +250,7 @@ require('gitsigns').setup {
 ------------------------------------------------------------------------------------------------------- lualine
 
 -- Custom catppuccin theme override to match tmux bar bg
-local custom_theme = require('catppuccin.utils.lualine')('mocha')
+local custom_theme = require 'catppuccin.utils.lualine' 'mocha'
 custom_theme.normal.c = { bg = '#1e1e2e', fg = '#cdd6f4' }
 custom_theme.inactive.a = { bg = '#1e1e2e', fg = '#89b4fa' }
 custom_theme.inactive.b = { bg = '#1e1e2e', fg = '#585b70', gui = 'bold' }
@@ -276,39 +276,6 @@ require('lualine').setup {
     lualine_x = { 'location' },
   },
 }
-
--- Padding below tabline
-vim.o.winbar = ' '
-
--- Fix all tabline-related highlight backgrounds after lualine loads
-vim.api.nvim_create_autocmd({ 'ColorScheme', 'VimEnter' }, {
-  callback = function()
-    vim.schedule(function()
-      local base = '#1e1e2e'
-      vim.api.nvim_set_hl(0, 'TabLineFill', { bg = base })
-      -- Fix lualine's internal tabline transition highlights
-      for _, name in ipairs(vim.fn.getcompletion('lualine_c_', 'highlight')) do
-        local hl = vim.api.nvim_get_hl(0, { name = name })
-        hl.bg = tonumber('1e1e2e', 16)
-        vim.api.nvim_set_hl(0, name, hl)
-      end
-    end)
-  end,
-})
-
--- Hide tabline when only one buffer is listed
-local function update_tabline()
-  local listed = vim.tbl_filter(function(b)
-    return vim.bo[b].buflisted
-  end, vim.api.nvim_list_bufs())
-  vim.o.showtabline = #listed > 1 and 2 or 0
-end
-
-vim.api.nvim_create_autocmd({ 'BufAdd', 'BufDelete', 'BufWipeout', 'VimEnter' }, {
-  callback = function()
-    vim.schedule(update_tabline)
-  end,
-})
 
 ------------------------------------------------------------------------------------------------------- roslyn
 
@@ -338,41 +305,41 @@ vim.cmd.colorscheme 'catppuccin-mocha'
 _G.octo_goto_file = function()
   local bufnr = vim.api.nvim_get_current_buf()
   local bufname = vim.api.nvim_buf_get_name(bufnr)
-  
+
   -- Check if we're in an Octo buffer
   if not string.match(bufname, 'octo://') then
     -- Fall back to default gf behavior
     local ok, err = pcall(function()
-      vim.cmd('normal! gf')
+      vim.cmd 'normal! gf'
     end)
     if not ok then
       vim.notify('Could not find file: ' .. tostring(err), vim.log.levels.WARN)
     end
     return
   end
-  
+
   -- Get current line number in the diff
   local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
   local total_lines = vim.api.nvim_buf_line_count(bufnr)
-  
+
   -- Search backwards for the diff header to find the file path
   local file_path = nil
   for i = cursor_line, math.max(1, cursor_line - 500), -1 do
     local line = vim.api.nvim_buf_get_lines(bufnr, i - 1, i, false)[1]
     if line then
       -- Try multiple patterns to match file paths
-      local path = line:match('^%+%+%+ b/(.+)$')  -- +++ b/path/to/file
-        or line:match('^%-%-%- a/(.+)$')          -- --- a/path/to/file
-        or line:match('^diff %-%-git a/[^%s]+ b/(.+)$')  -- diff --git a/... b/path
-        or line:match('^diff %-%-git a/(.+) b/')  -- diff --git a/path b/...
-      
+      local path = line:match '^%+%+%+ b/(.+)$' -- +++ b/path/to/file
+        or line:match '^%-%-%- a/(.+)$' -- --- a/path/to/file
+        or line:match '^diff %-%-git a/[^%s]+ b/(.+)$' -- diff --git a/... b/path
+        or line:match '^diff %-%-git a/(.+) b/' -- diff --git a/path b/...
+
       if path then
-        file_path = path:gsub('%s+$', '')  -- Trim trailing whitespace
+        file_path = path:gsub('%s+$', '') -- Trim trailing whitespace
         break
       end
     end
   end
-  
+
   if not file_path then
     -- Debug: show some context
     local context = {}
@@ -397,14 +364,14 @@ _G.octo_goto_file = function()
     end
     return
   end
-  
+
   -- Try to determine the line number from the diff hunk header
   local target_line = nil
   for i = cursor_line, math.max(1, cursor_line - 100), -1 do
     local line = vim.api.nvim_buf_get_lines(bufnr, i - 1, i, false)[1]
     if line then
       -- Match hunk header like: @@ -10,5 +10,7 @@
-      local old_start, old_count, new_start, new_count = line:match('^@@ %-(%d+),?(%d*) %+(%d+),?(%d*) @@')
+      local old_start, old_count, new_start, new_count = line:match '^@@ %-(%d+),?(%d*) %+(%d+),?(%d*) @@'
       if new_start then
         -- Calculate offset from hunk start to cursor
         local offset = 0
@@ -423,21 +390,21 @@ _G.octo_goto_file = function()
       end
     end
   end
-  
+
   -- Open the file
   local git_root = vim.fn.systemlist('git rev-parse --show-toplevel')[1]
   if not git_root or git_root == '' then
     vim.notify('Not in a git repository', vim.log.levels.ERROR)
     return
   end
-  
+
   local full_path = git_root .. '/' .. file_path
-  
+
   if vim.fn.filereadable(full_path) == 1 then
     vim.cmd('edit ' .. vim.fn.fnameescape(full_path))
     if target_line and target_line > 0 then
-      vim.api.nvim_win_set_cursor(0, {target_line, 0})
-      vim.cmd('normal! zz')  -- Center the line on screen
+      vim.api.nvim_win_set_cursor(0, { target_line, 0 })
+      vim.cmd 'normal! zz' -- Center the line on screen
     end
     vim.notify('Opened ' .. file_path .. (target_line and (':' .. target_line) or ''), vim.log.levels.INFO)
   else
@@ -451,17 +418,17 @@ require('octo').setup {
   mappings_disable_default = true,
   pull_requests = {
     order_by = {
-      field = 'UPDATED_AT',        -- CREATED_AT, UPDATED_AT, or COMMENTS
-      direction = 'DESC'            -- DESC or ASC
+      field = 'UPDATED_AT', -- CREATED_AT, UPDATED_AT, or COMMENTS
+      direction = 'DESC', -- DESC or ASC
     },
     always_select_remote_on_create = false,
-    use_branch_name_as_title = false
+    use_branch_name_as_title = false,
   },
   issues = {
     order_by = {
-      field = 'UPDATED_AT',         -- CREATED_AT, UPDATED_AT, or COMMENTS  
-      direction = 'DESC'            -- DESC or ASC
-    }
+      field = 'UPDATED_AT', -- CREATED_AT, UPDATED_AT, or COMMENTS
+      direction = 'DESC', -- DESC or ASC
+    },
   },
   picker_config = {
     use_emojis = false,
@@ -576,14 +543,13 @@ require('octo').setup {
 
 -- Map to jump from diff to actual file in Octo buffers
 -- Works in both PR view and review diff view
-vim.api.nvim_create_autocmd({'FileType', 'BufEnter'}, {
-  pattern = {'octo', 'octo_*', '*'},
+vim.api.nvim_create_autocmd({ 'FileType', 'BufEnter' }, {
+  pattern = { 'octo', 'octo_*', '*' },
   callback = function(ev)
     local bufname = vim.api.nvim_buf_get_name(ev.buf)
     -- Check if it's an Octo buffer by name (review diffs don't have octo filetype)
     if string.match(bufname, 'octo://') then
-      vim.keymap.set('n', '<leader>of', '<cmd>lua _G.octo_goto_file()<CR>', 
-        { buffer = ev.buf, desc = 'Open file from diff', noremap = true, silent = false })
+      vim.keymap.set('n', '<leader>of', '<cmd>lua _G.octo_goto_file()<CR>', { buffer = ev.buf, desc = 'Open file from diff', noremap = true, silent = false })
     end
   end,
 })
