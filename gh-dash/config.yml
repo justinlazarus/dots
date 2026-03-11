@@ -5,6 +5,8 @@ prSections:
     filters: is:open base:main draft:false sort:created-asc
   - title: Involved
     filters: is:open involves:@me -author:@me
+  - title: Recently Approved
+    filters: is:pr review:approved reviewed-by:@me sort:created-desc
 issuesSections:
   - title: My Issues
     filters: is:open author:@me
