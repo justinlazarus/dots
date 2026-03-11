@@ -34,7 +34,10 @@
 # worktree-path = "~/worktrees/{{ repo }}/{{ branch | sanitize }}"
 #
 # `~` expands to the home directory. Relative paths are relative to the repository root.
-#
+
+# Centralized worktrees - full branch name
+worktree-path = "~/worktrees/{{ branch | sanitize }}"
+
 # ## LLM commit messages
 #
 # Generate commit messages automatically during merge. Requires an external CLI tool.
@@ -208,9 +211,12 @@
 [post-switch]
 tmux = """
 if [ -n "$TMUX" ]; then
-  SESSION={{ repo }}-{{ branch | sanitize }}
+  # Extract last part of branch name (after last /) for session name
+  BRANCH_FULL="{{ branch }}"
+  SESSION="${BRANCH_FULL##*/}"
+  
   if ! tmux has-session -t "$SESSION" 2>/dev/null; then
-    tmux new-session -d -s "$SESSION" -c {{ worktree_path }}
+    tmux new-session -d -s "$SESSION" -c "{{ worktree_path }}"
   fi
   tmux switch-client -t "$SESSION"
 fi

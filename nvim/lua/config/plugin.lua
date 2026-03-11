@@ -259,29 +259,21 @@ custom_theme.inactive.c = { bg = '#1e1e2e', fg = '#6c7086' }
 require('lualine').setup {
   options = {
     theme = custom_theme,
-    section_separators = { left = '', right = '' },
+    section_separators = '',
     component_separators = '',
     globalstatus = true,
   },
   sections = {
-    lualine_a = { { 'mode', separator = { left = '', right = '' } } },
+    lualine_a = { 'mode' },
     lualine_b = { 'diagnostics' },
-    lualine_c = { 'filename' },
-    lualine_x = { 'filetype' },
+    lualine_c = { { 'filename', path = 4 } },
+    lualine_x = { 'lsp_progress', 'filetype' },
     lualine_y = { 'progress' },
-    lualine_z = { { 'location', separator = { left = '', right = '' } } },
+    lualine_z = { 'location' },
   },
   inactive_sections = {
-    lualine_c = { 'filename' },
+    lualine_c = { { 'filename', path = 4 } },
     lualine_x = { 'location' },
-  },
-  tabline = {
-    lualine_a = {},
-    lualine_b = {},
-    lualine_c = { { 'buffers', separator = { left = '', right = '' }, buffers_color = { active = 'lualine_a_normal', inactive = 'lualine_b_normal' } } },
-    lualine_x = {},
-    lualine_y = {},
-    lualine_z = {},
   },
 }
 
@@ -595,4 +587,3 @@ vim.api.nvim_create_autocmd({'FileType', 'BufEnter'}, {
     end
   end,
 })
-
